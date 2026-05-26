@@ -9,6 +9,7 @@ from streamlit_folium import st_folium
 from dotenv import load_dotenv
 from streamlit_js_eval import get_geolocation
 
+import html
 import math
 from data_store import (
     add_itinerary_item,
@@ -732,6 +733,183 @@ def render_place_actions(place, source_view, key_prefix, fremhev_mat=False):
             st.link_button(label, url, use_container_width=True)
 
 
+KART_FARGE_MAT = "#2E7D32"
+KART_FARGE_KULTUR = "#6A1B9A"
+KART_FARGE_NATUR = "#00838F"
+KART_FARGE_GOLF = "#004D40"
+
+KART_KATEGORI_FARGER = {
+    "restaurant": KART_FARGE_MAT,
+    "Mat & Vin": KART_FARGE_MAT,
+    "Kultur & Historie": KART_FARGE_KULTUR,
+    "Natur & Aktivitet": KART_FARGE_NATUR,
+    "Golf": KART_FARGE_GOLF,
+    "gastronomi": KART_FARGE_MAT,
+    "kultur": KART_FARGE_KULTUR,
+    "kafé": KART_FARGE_MAT,
+    "kafe": KART_FARGE_MAT,
+    "natur": KART_FARGE_NATUR,
+    "historie": KART_FARGE_KULTUR,
+    "museum": KART_FARGE_KULTUR,
+    "arkitektur": KART_FARGE_KULTUR,
+    "urbanexploring": KART_FARGE_KULTUR,
+    "overnaturlig": KART_FARGE_KULTUR,
+    "spøkstad": KART_FARGE_KULTUR,
+    "eventyr": KART_FARGE_NATUR,
+    "golf": KART_FARGE_GOLF,
+    "friluft": KART_FARGE_NATUR,
+    "sport": KART_FARGE_NATUR,
+    "aktivitet": KART_FARGE_NATUR,
+}
+DEFAULT_KART_FARGE = "#E63232"
+
+
+def kart_markor_farge(sted):
+    """Returnerer hex-farge for kartmarkør basert på profil_kategori, type eller source_type."""
+    if sted.get("source_type") == "restaurant":
+        return KART_KATEGORI_FARGER["restaurant"]
+
+    for key in (sted.get("profil_kategori"), sted.get("type")):
+        if not key:
+            continue
+        if key in KART_KATEGORI_FARGER:
+            return KART_KATEGORI_FARGER[key]
+        low = str(key).lower()
+        if low in KART_KATEGORI_FARGER:
+            return KART_KATEGORI_FARGER[low]
+    return DEFAULT_KART_FARGE
+
+
+def _hent_sted_bilde_for_kart(sted):
+    if sted.get("image_url"):
+        return sted["image_url"]
+    return _hent_sted_bilde_url_cached(
+        sted.get("id", ""),
+        sted.get("navn", ""),
+        sted.get("by", ""),
+        sted.get("land", ""),
+        sted.get("latitude"),
+        sted.get("longitude"),
+        sted.get("type", ""),
+        sted.get("profil_kategori", ""),
+        sted.get("image_url", ""),
+    )
+
+
+def lag_sted_kart_popup(sted):
+    """HTML-popup med navn, sted og bilde hvis tilgjengelig."""
+    navn = html.escape(sted.get("navn", ""))
+    by = html.escape(sted.get("by", ""))
+    land = html.escape(sted.get("land", ""))
+    kategori = html.escape(
+        sted.get("profil_kategori") or sted.get("type") or sted.get("source_type", "")
+    )
+    bilde_html = ""
+    bilde_url = _hent_sted_bilde_for_kart(sted)
+    if bilde_url:
+        safe_url = html.escape(bilde_url, quote=True)
+        bilde_html = (
+            f'<img src="{safe_url}" width="150" alt="{navn}" '
+            'style="border-radius:8px;display:block;margin-top:5px;">'
+        )
+    return (
+        f'<div style="font-family:Segoe UI,sans-serif;max-width:240px;">'
+        f"<strong>{navn}</strong><br>"
+        f"📍 {by}, {land}<br>"
+        f'<span style="color:#6B7280;font-size:0.85em;">{kategori}</span>'
+        f"{bilde_html}"
+        f"</div>"
+    )
+
+
+def legg_til_sted_markor(kart, sted):
+    """Legger til én fargekodet CircleMarker med popup på et Folium-kart."""
+    farge = kart_markor_farge(sted)
+    folium.CircleMarker(
+        location=[sted["latitude"], sted["longitude"]],
+        radius=5,
+        weight=1,
+        color=farge,
+        fill=True,
+        fill_color=farge,
+        fill_opacity=0.85,
+        tooltip=f"{sted.get('navn', '')} ({sted.get('by', '')})",
+        popup=folium.Popup(lag_sted_kart_popup(sted), max_width=280),
+    ).add_to(kart)
+
+
+def lag_stedskart(steder, sentrum=None, zoom_start=4):
+    """Folium-kart med kategorifarger og bilde-popup for en liste steder."""
+    if sentrum:
+        m = folium.Map(location=[sentrum[0], sentrum[1]], zoom_start=zoom_start, tiles="OpenStreetMap")
+    else:
+        m = folium.Map(location=[54.0, 14.0], zoom_start=zoom_start, tiles="OpenStreetMap")
+    for sted in steder:
+        if sted.get("latitude") is None or sted.get("longitude") is None:
+            continue
+        legg_til_sted_markor(m, sted)
+    return m
+
+
+def lag_perler_kart(steder):
+    """Folium-kart for skjulte perler (bakoverkompatibel wrapper)."""
+    return lag_stedskart(steder)
+
+
+def optimaliser_reiserute_naermeste_nabo(items):
+    """Sorterer reiseplan geografisk med nearest-neighbor fra første sted."""
+    if len(items) <= 1:
+        return list(items)
+
+    med_koord = [
+        i for i in items if i.get("latitude") is not None and i.get("longitude") is not None
+    ]
+    uten_koord = [
+        i for i in items if i.get("latitude") is None or i.get("longitude") is None
+    ]
+    if len(med_koord) <= 1:
+        return list(items)
+
+    gjenstaende = list(med_koord[1:])
+    rekkefolge = [med_koord[0]]
+    while gjenstaende:
+        sist = rekkefolge[-1]
+        lat1, lon1 = float(sist["latitude"]), float(sist["longitude"])
+        nærmeste_idx = 0
+        kortest = float("inf")
+        for idx, kandidat in enumerate(gjenstaende):
+            avstand = regn_ut_avstand_km(
+                lat1, lon1, float(kandidat["latitude"]), float(kandidat["longitude"])
+            )
+            if avstand < kortest:
+                kortest = avstand
+                nærmeste_idx = idx
+        rekkefolge.append(gjenstaende.pop(nærmeste_idx))
+    return rekkefolge + uten_koord
+
+
+def lag_chat_oppdag_kart(lat, lon, sentrum_navn="", radius_km=50):
+    """Chat-kart med blått søkepunkt og nærliggende perler/spisesteder innen radius."""
+    m = folium.Map(location=[lat, lon], zoom_start=9, tiles="OpenStreetMap")
+    navn = html.escape(sentrum_navn or "Søkepunkt")
+    folium.Marker(
+        location=[lat, lon],
+        tooltip=sentrum_navn or "Søkepunkt",
+        popup=f"<b>{navn}</b>",
+        icon=folium.Icon(color="blue", icon="info-sign"),
+    ).add_to(m)
+
+    for sted in SKJULTE_PERLER_DB + LOKALE_SPISESTEDER_DB:
+        slat = sted.get("latitude")
+        slon = sted.get("longitude")
+        if slat is None or slon is None:
+            continue
+        if regn_ut_avstand_km(lat, lon, float(slat), float(slon)) > radius_km:
+            continue
+        legg_til_sted_markor(m, sted)
+    return m
+
+
 def lag_radar_kart(treff_liste, sentrum=None, sentrum_navn=""):
     if sentrum:
         m = folium.Map(location=[sentrum[0], sentrum[1]], zoom_start=7, tiles="OpenStreetMap")
@@ -1339,19 +1517,7 @@ with fane2:
 
     with st.expander(T["perler_kart_expander"], expanded=False):
         if perler_med_koordinater:
-            m = folium.Map(location=[54.0, 14.0], zoom_start=4, tiles="OpenStreetMap")
-
-            for _, row in kart_df.iterrows():
-                folium.CircleMarker(
-                    location=[row["latitude"], row["longitude"]],
-                    radius=3.5,
-                    weight=1,
-                    color="#E63232",
-                    fill=True,
-                    fill_color="#E63232",
-                    fill_opacity=0.8,
-                    tooltip=f"<b>🏛️ {row['navn']}</b><br>📍 {row['by']}, {row['land']}",
-                ).add_to(m)
+            m = lag_perler_kart(perler_med_koordinater)
 
             st_folium(
                 m,
@@ -1463,6 +1629,23 @@ with fane3:
     st.header(T["mat_header"])
     st.caption(f"{len(LOKALE_SPISESTEDER_DB)} spisesteder i databasen")
 
+    mat_med_koordinater = [
+        s for s in LOKALE_SPISESTEDER_DB if "latitude" in s and "longitude" in s
+    ]
+    with st.expander("🗺️ Kart over spisesteder", expanded=False):
+        if mat_med_koordinater:
+            mat_kart = lag_stedskart(mat_med_koordinater)
+            st_folium(
+                mat_kart,
+                width=700,
+                height=500,
+                returned_objects=[],
+                key="mat_folium_kart",
+            )
+            st.caption(f"{len(mat_med_koordinater)} spisesteder på kartet")
+        else:
+            st.info(T["perler_ingen_koordinater"])
+
     col_m1, col_m2 = st.columns(2)
     with col_m1:
         sok_mat = st.text_input(T["mat_sok"], "", key="mat_sok_input").lower()
@@ -1573,7 +1756,11 @@ with fane4:
             use_container_width=True,
             key="reiseplan_ai_btn",
         ):
-            st.write_stream(generer_ai_reiserute(itinerary_items, dager))
+            optimalisert_reiseplan = optimaliser_reiserute_naermeste_nabo(itinerary_items)
+            st.caption(
+                "🎯 Reiseplanen din er automatisk geografisk optimalisert for minimal reisevei."
+            )
+            st.write_stream(generer_ai_reiserute(optimalisert_reiseplan, dager))
 
 
 
@@ -1695,7 +1882,7 @@ with fane6:
         )
         st.write("")
 
-    for melding in st.session_state.reise_chat:
+    for loop_index, melding in enumerate(st.session_state.reise_chat):
         with st.chat_message(melding["role"]):
             st.markdown(melding["content"])
             if melding.get("lat") and melding.get("lon"):
@@ -1703,7 +1890,19 @@ with fane6:
                 st.markdown(
                     f"{T['chat_kart_over']} {(melding.get('sted') or 'destinasjonen').capitalize()}:"
                 )
-                st.map({"lat": [melding["lat"]], "lon": [melding["lon"]]}, zoom=9)
+                chat_kart = lag_chat_oppdag_kart(
+                    melding["lat"],
+                    melding["lon"],
+                    melding.get("sted") or "",
+                )
+                sted_key = (melding.get("sted") or "destinasjon").replace(" ", "_")
+                st_folium(
+                    chat_kart,
+                    width=700,
+                    height=420,
+                    returned_objects=[],
+                    key=f"chat_folium_map_{sted_key}_{loop_index}",
+                )
 
     with st.form("reise_chat_skjema", clear_on_submit=True):
         sporsmal = st.text_area(
@@ -1749,7 +1948,15 @@ with fane6:
             if lat and lon:
                 st.write("")
                 st.markdown(f"{T['chat_kart_over']} {sted_for_kart.capitalize()}:")
-                st.map({"lat": [lat], "lon": [lon]}, zoom=9)
+                ny_chat_kart = lag_chat_oppdag_kart(lat, lon, sted_for_kart)
+                sted_key = (sted_for_kart or "destinasjon").replace(" ", "_")
+                st_folium(
+                    ny_chat_kart,
+                    width=700,
+                    height=420,
+                    returned_objects=[],
+                    key=f"chat_folium_map_{sted_key}_{len(st.session_state.reise_chat)}",
+                )
 
         st.session_state.reise_chat.append(
             {
