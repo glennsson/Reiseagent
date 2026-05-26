@@ -1,0 +1,16 @@
+# ========================================================
+# 📅 DATO KJØRT: 2026-05-25 20:47:37
+# Spesialsteder fra britiske og tyske TV-serier
+# ========================================================
+
+TV_PERLER = [
+    {"navn": "Orford Ness", "by": "Orford Ness", "land": "Storbritannia", "type": "kultur", "latitude": 52.0814, "longitude": 1.5586, "beskrivelse": "Fantastisk historisk sted kjent fra TV.", "tips": "Kjent fra TV-dokumentarer om sære og forlatte steder.", "pris": "€"},
+    {"navn": "Imber", "by": "Imber", "land": "Storbritannia", "type": "kultur", "latitude": 51.234, "longitude": -2.051, "beskrivelse": "Fantastisk historisk sted kjent fra TV.", "tips": "Kjent fra TV-dokumentarer om sære og forlatte steder.", "pris": "€"},
+    {"navn": "Tyneham", "by": "Tyneham", "land": "Storbritannia", "type": "kultur", "latitude": 50.623, "longitude": -2.169, "beskrivelse": "Fantastisk historisk sted kjent fra TV.", "tips": "Kjent fra TV-dokumentarer om sære og forlatte steder.", "pris": "€"},
+    {"navn": "Stroma", "by": "Stroma", "land": "Storbritannia", "type": "kultur", "latitude": 58.68, "longitude": -3.12, "beskrivelse": "Fantastisk historisk sted kjent fra TV.", "tips": "Kjent fra TV-dokumentarer om sære og forlatte steder.", "pris": "€"},
+    {"navn": "Scapa Flow", "by": "Scapa Flow", "land": "Storbritannia", "type": "kultur", "latitude": 58.9, "longitude": -3.05, "beskrivelse": "Fantastisk historisk sted kjent fra TV.", "tips": "Kjent fra TV-dokumentarer om sære og forlatte steder.", "pris": "€"},
+    {"navn": "Beelitz-Heilstätten", "by": "Beelitz-Heilstätten", "land": "Tyskland", "type": "kultur", "latitude": 52.2614, "longitude": 12.9233, "beskrivelse": "Fantastisk historisk sted kjent fra TV.", "tips": "Kjent fra TV-dokumentarer om sære og forlatte steder.", "pris": "€"},
+    {"navn": "Prora", "by": "Prora", "land": "Tyskland", "type": "kultur", "latitude": 54.4389, "longitude": 13.575, "beskrivelse": "Fantastisk historisk sted kjent fra TV.", "tips": "Kjent fra TV-dokumentarer om sære og forlatte steder.", "pris": "€"},
+    {"navn": "Teufelsberg", "by": "Teufelsberg", "land": "Tyskland", "type": "kultur", "latitude": 52.4977, "longitude": 13.2429, "beskrivelse": "Fantastisk historisk sted kjent fra TV.", "tips": "Kjent fra TV-dokumentarer om sære og forlatte steder.", "pris": "€"},
+    {"navn": "Wünsdorf", "by": "Wünsdorf", "land": "Tyskland", "type": "kultur", "latitude": 52.1631, "longitude": 13.4744, "beskrivelse": "Fantastisk historisk sted kjent fra TV.", "tips": "Kjent fra TV-dokumentarer om sære og forlatte steder.", "pris": "€"},
+]

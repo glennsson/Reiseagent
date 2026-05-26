@@ -1,0 +1,7 @@
+streamlit
+requests
+python-dotenv
+streamlit-js-eval
+pandas
+folium
+streamlit-folium
