@@ -3,7 +3,6 @@ import requests
 import os
 import random
 import json
-from datetime import datetime
 import pandas as pd
 import folium
 from streamlit_folium import st_folium
@@ -1585,39 +1584,14 @@ with fane5:
     if alle_labels:
         c_fra, c_til = st.columns(2)
         with c_fra:
-            filter_fra = st.text_input(T["transport_sok_fra"], key="tp_filter_fra")
-            fra_kandidater = [
-                lbl for lbl in alle_labels if not filter_fra or filter_fra.lower() in lbl.lower()
-            ][:100]
-            fra_options = fra_kandidater or alle_labels[:1]
-            default_fra = st.session_state.get("tp_fra_label")
-            fra_index = fra_options.index(default_fra) if default_fra in fra_options else 0
-            fra_label = st.selectbox(
-                T["transport_fra"],
-                fra_options,
-                index=min(fra_index, len(fra_options) - 1),
-                key="tp_fra_select",
-            )
+            fra_label = st.selectbox(T["transport_fra"], alle_labels, key="tp_fra_select")
         with c_til:
-            filter_til = st.text_input(T["transport_sok_til"], key="tp_filter_til")
-            til_kandidater = [
-                lbl for lbl in alle_labels if not filter_til or filter_til.lower() in lbl.lower()
-            ][:100]
-            til_options = til_kandidater or alle_labels[:1]
-            default_til = st.session_state.get("tp_til_label")
-            til_index = til_options.index(default_til) if default_til in til_options else 0
-            til_label = st.selectbox(
-                T["transport_til"],
-                til_options,
-                index=min(til_index, len(til_options) - 1),
-                key="tp_til_select",
-            )
+            til_label = st.selectbox(T["transport_til"], alle_labels, key="tp_til_select")
 
         fra_sted = stedvalg.get(fra_label)
         til_sted = stedvalg.get(til_label)
 
         if fra_sted and til_sted and fra_sted.get("id") != til_sted.get("id"):
-            st.markdown(f"### 🗺️ Reis fra {fra_sted['by']} til {til_sted['by']}")
             eksterne = bygg_eksterne_planleggere(
                 fra_sted["by"],
                 fra_sted["land"],

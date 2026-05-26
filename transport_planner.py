@@ -1,4 +1,4 @@
-"""Europeisk kollektivtransport-planlegger (inspirert av cp.atlas.sk)."""
+"""Eksterne reiseplanleggere og stedvalg for transportfanen."""
 
 from datetime import datetime
 from urllib.parse import quote
