@@ -1579,15 +1579,10 @@ with fane4:
 
 
 with fane5:
-    st.header(T["transport_header"])
-    st.caption(T["transport_sub"])
-
     stedvalg = bygg_stedvalg_fra_database(SKJULTE_PERLER_DB + LOKALE_SPISESTEDER_DB)
     alle_labels = sorted(stedvalg.keys())
 
-    if not alle_labels:
-        st.caption("Ingen steder med koordinater i databasen ennå.")
-    else:
+    if alle_labels:
         c_fra, c_til = st.columns(2)
         with c_fra:
             filter_fra = st.text_input(T["transport_sok_fra"], key="tp_filter_fra")
@@ -1622,9 +1617,7 @@ with fane5:
         til_sted = stedvalg.get(til_label)
 
         if fra_sted and til_sted and fra_sted.get("id") != til_sted.get("id"):
-            st.markdown(
-                f"### 🗺️ Vis rute: **{fra_sted['by']}** til **{til_sted['by']}**"
-            )
+            st.markdown(f"### 🗺️ Reis fra {fra_sted['by']} til {til_sted['by']}")
             eksterne = bygg_eksterne_planleggere(
                 fra_sted["by"],
                 fra_sted["land"],
@@ -1661,15 +1654,6 @@ with fane5:
                     use_container_width=True,
                     key="tp_link_trainline",
                 )
-            if "cp_atlas" in eksterne:
-                st.link_button(
-                    T["transport_lenke_cp"],
-                    eksterne["cp_atlas"],
-                    use_container_width=True,
-                    key="tp_link_cp",
-                )
-        elif fra_sted and til_sted:
-            st.caption(T["transport_samme_sted"])
 
 
 
