@@ -10,6 +10,17 @@ from dotenv import load_dotenv
 from streamlit_js_eval import get_geolocation
 
 import math
+from urllib.parse import urlencode
+
+from data_store import (
+    add_itinerary_item,
+    get_affiliate_stats,
+    get_itinerary_items,
+    get_places,
+    log_affiliate_click,
+    remove_itinerary_item,
+)
+from translations import TEKSTER
 
 
 def regn_ut_avstand_km(lat1, lon1, lat2, lon2):
@@ -29,9 +40,6 @@ def regn_ut_avstand_km(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
-
-# Henter de strukturerte datatabellene fra den nye databasefilen
-from database import SKJULTE_PERLER, LOKALE_SPISESTEDER
 
 load_dotenv()
 
@@ -53,7 +61,7 @@ def last_inn_data():
                 if "reise_chat" not in lagret:
                     lagret["reise_chat"] = []
                 return lagret
-        except:
+        except Exception:
             return default_data
     return default_data
 
@@ -78,7 +86,7 @@ if "reise_chat" not in st.session_state:
 # ========================================
 # KONFIGURASJON & DESIGN
 # ========================================
-st.set_page_config(page_title="Hemmelige Europa", layout="wide")
+st.set_page_config(page_title="Hemmelige Europa", layout="wide", initial_sidebar_state="expanded")
 
 # ========================================
 # SPRÅKSYSTEM (sidebar-selektor + ordbok)
@@ -86,199 +94,178 @@ st.set_page_config(page_title="Hemmelige Europa", layout="wide")
 spraak = st.sidebar.segmented_control(
     "Språk / Language",
     options=["NO", "EN"],
-    default="NO",
+    default=st.session_state.get("spraak", "NO") if st.session_state.get("spraak", "NO") in ["NO", "EN"] else "NO",
     key="spraak",
     selection_mode="single",
 )
 
-TEKSTER = {
-    "NO": {
-        "app_tittel": "🇪🇺 Hemmelige Europa",
-        "app_caption": "Unike reiseanbefalinger",
-        "fane_hjem": "🏠 Hjem",
-        "fane_perler": "🏛️ Skjulte perler",
-        "fane_mat": "🍽️ Mat",
-        "fane_radar": "🧠 For deg",
-        "fane_chat": "💬 Reise-chat",
-        "hjem_header": "Oppdag det ekte Europa",
-        "hjem_metric_perler": "🏛️ Registrerte perler",
-        "hjem_metric_spisesteder": "🍽️ Unike spisesteder",
-        "hjem_metric_land": "🇪🇺 Unike land",
-        "hjem_filter_land": "Filtrer lykkehjul på land",
-        "hjem_knapp_tilfeldig": "🎲 Gi meg en tilfeldig perle!",
-        "hjem_sted": "📍 Sted:",
-        "hjem_kategori": "📂 Kategori:",
-        "hjem_tips": "💡 Tips:",
-        "hjem_beste_tid": "🕐 Beste tidspunkt:",
-        "hjem_kart": "🗺️ Kartplassering:",
-        "hjem_ingen_kart": "🗺️ Kartkoordinater for dette stedet er ikke lagt inn ennå.",
-        "perler_header": "🏛️ Utforsk skjulte skatter",
-        "perler_kart_expander": "🗺️ Vis alle perler på kart",
-        "perler_kart_caption": "Viser {0} av {1} perler med kartkoordinater. 🖱️ Hold musepekeren over et punkt for detaljer.",
-        "perler_reisemal_header": "🗺️ Reisemål og overnatting fordelt på land",
-        "perler_booking": "🏨 Sjekk priser på Booking.com",
-        "perler_ingen_reisemal": "Ingen reisemål å vise.",
-        "perler_ingen_koordinater": "Ingen perler har kartkoordinater ennå.",
-        "perler_sok": "🔍 Søk etter navn eller by (perler)",
-        "perler_sorter_type": "Sorter etter type",
-        "perler_alle": "Alle",
-        "perler_ingen_treff": "Ingen perler matchet søket ditt.",
-        "mat_header": "🍽️ Autentiske spisesteder",
-        "mat_sok": "🔍 Søk etter navn eller by (restauranter)",
-        "mat_sorter_type": "Sorter etter kjøkkentype",
-        "mat_pris": "💰 Prisnivå:",
-        "mat_ingen_treff": "Ingen spisesteder matchet søket ditt.",
-        "radar_tittel": "📍 Radaren – finn skjulte perler nær deg",
-        "radar_sub": "Oppdag reisemål og spisesteder i nærheten av deg eller i et valgt land.",
-        "radar_metode": "Velg søkemetode",
-        "radar_gps": "Bruk min GPS-posisjon",
-        "radar_land_sok": "Søk på land",
-        "radar_radius": "Maks avstand (km)",
-        "radar_spinner": "Henter GPS-posisjonen din...",
-        "radar_sentrum_gps": "din GPS-posisjon",
-        "radar_warning": "Kunne ikke hente GPS-posisjon. Sjekk tillatelser.",
-        "radar_velg_land": "Velg et land",
-        "radar_knapp_skann": "🔍 Skann området",
-        "radar_fant": "Fant",
-        "radar_destinasjoner": "destinasjoner i nærheten av",
-        "radar_unna": "unna",
-        "radar_kategori": "Kategori",
-        "radar_pris": "Pris",
-        "radar_tips": "Tips",
-        "radar_booking": "🏨 Bestill hotell i",
-        "radar_ingen_treff": "Ingen destinasjoner funnet innenfor valgt avstand eller område.",
-        "radar_ingen_data": "Ingen steder tilgjengelig for denne regionen.",
-        "chat_header": "💬 Spør reiseeksperten",
-        "chat_caption": "Tips: Start meldingen med `wiki <stedsnavn>` (f.eks. `wiki Berlin`) for å hente rådata før AI-en svarer!",
-        "chat_last_ned": "📄 Last ned reiseplanen (Klar for PDF / Utskrift)",
-        "chat_kart_over": "🗺️ Interaktivt kart over",
-        "chat_input": "Hvor vil du reise, eller hva lurer du på?",
-        "chat_wiki_spinner": "Henter bakgrunnsinfo om {0}...",
-        "chat_wiki_hentet": "📂 **Hentet fra Wikivoyage:**",
-    },
-    "EN": {
-        "app_tittel": "🇪🇺 Hidden Europe",
-        "app_caption": "Unique travel recommendations",
-        "fane_hjem": "🏠 Home",
-        "fane_perler": "🏛️ Hidden Gems",
-        "fane_mat": "🍽️ Food",
-        "fane_radar": "🧠 For You",
-        "fane_chat": "💬 Travel Chat",
-        "hjem_header": "Discover the real Europe",
-        "hjem_metric_perler": "🏛️ Registered gems",
-        "hjem_metric_spisesteder": "🍽️ Unique restaurants",
-        "hjem_metric_land": "🇪🇺 Unique countries",
-        "hjem_filter_land": "Filter wheel on country",
-        "hjem_knapp_tilfeldig": "🎲 Give me a random gem!",
-        "hjem_sted": "📍 Location:",
-        "hjem_kategori": "📂 Category:",
-        "hjem_tips": "💡 Tip:",
-        "hjem_beste_tid": "🕐 Best time:",
-        "hjem_kart": "🗺️ Map location:",
-        "hjem_ingen_kart": "🗺️ Map coordinates for this place have not been added yet.",
-        "perler_header": "🏛️ Explore hidden treasures",
-        "perler_kart_expander": "🗺️ Show all gems on map",
-        "perler_kart_caption": "Showing {0} of {1} gems with map coordinates. 🖱️ Hover over a point for details.",
-        "perler_reisemal_header": "🗺️ Destinations and accommodation by country",
-        "perler_booking": "🏨 Check prices on Booking.com",
-        "perler_ingen_reisemal": "No destinations to show.",
-        "perler_ingen_koordinater": "No gems have map coordinates yet.",
-        "perler_sok": "🔍 Search by name or city (gems)",
-        "perler_sorter_type": "Filter by type",
-        "perler_alle": "All",
-        "perler_ingen_treff": "No gems matched your search.",
-        "mat_header": "🍽️ Authentic restaurants",
-        "mat_sok": "🔍 Search by name or city (restaurants)",
-        "mat_sorter_type": "Filter by cuisine type",
-        "mat_pris": "💰 Price level:",
-        "mat_ingen_treff": "No restaurants matched your search.",
-        "radar_tittel": "📍 Radar – find hidden gems near you",
-        "radar_sub": "Discover travel destinations and restaurants near you or in a selected country.",
-        "radar_metode": "Select search method",
-        "radar_gps": "Use my GPS location",
-        "radar_land_sok": "Search by country",
-        "radar_radius": "Max distance (km)",
-        "radar_spinner": "Retrieving your GPS location...",
-        "radar_sentrum_gps": "your GPS location",
-        "radar_warning": "Could not retrieve GPS location. Please check browser permissions.",
-        "radar_velg_land": "Select a country",
-        "radar_knapp_skann": "🔍 Scan area",
-        "radar_fant": "Found",
-        "radar_destinasjoner": "destinations near",
-        "radar_unna": "away",
-        "radar_kategori": "Category",
-        "radar_pris": "Price",
-        "radar_tips": "Tips",
-        "radar_booking": "🏨 Book hotel in",
-        "radar_ingen_treff": "No destinations found within the selected distance or area.",
-        "radar_ingen_data": "No coordinates available for the selected region.",
-        "chat_header": "💬 Ask the travel expert",
-        "chat_caption": "Tip: Start your message with `wiki <place>` (e.g. `wiki Berlin`) to fetch raw data before the AI responds!",
-        "chat_last_ned": "📄 Download travel plan (Ready for PDF / Print)",
-        "chat_kart_over": "🗺️ Interactive map of",
-        "chat_input": "Where do you want to travel, or what would you like to know?",
-        "chat_wiki_spinner": "Fetching background info about {0}...",
-        "chat_wiki_hentet": "📂 **Retrieved from Wikivoyage:**",
-    },
-}
+T = TEKSTER.get(spraak, TEKSTER["NO"])
 
-T = TEKSTER[spraak]
+st.sidebar.caption(T["affiliate_disclosure"])
+affiliate_stats = get_affiliate_stats()
+with st.sidebar.expander(T["affiliate_stats_header"], expanded=False):
+    st.metric(T["affiliate_total_clicks"], affiliate_stats["total_clicks"])
+    if affiliate_stats["latest_click"]:
+        st.caption(f"{T['affiliate_latest_click']}: {affiliate_stats['latest_click']}")
+    if affiliate_stats["top_places"]:
+        st.write(T["affiliate_top_places"])
+        for row in affiliate_stats["top_places"]:
+            st.caption(
+                f"{row['place_name']} ({row['city']}, {row['country']}): {row['clicks']}"
+            )
+    if affiliate_stats["top_sources"]:
+        st.write(T["affiliate_top_sources"])
+        for row in affiliate_stats["top_sources"]:
+            st.caption(f"{row['source_view']}: {row['clicks']}")
+
 
 
 # --- PROFF STYLING (CSS-INJEKSJON) ---
 st.markdown(
     """
     <style>
-        /* ── Importer Inter Font ── */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-        html, body, [class*="css"], .stMarkdown {
+        :root {
+            --gemini-bg: #F8FAFD;
+            --gemini-surface: #FFFFFF;
+            --gemini-surface-2: #F0F4F9;
+            --gemini-text: #1F1F1F;
+            --gemini-muted: #5F6368;
+            --gemini-border: #DADCE0;
+            --gemini-blue: #1A73E8;
+            --gemini-purple: #A142F4;
+            --gemini-radius: 18px;
+            --gemini-shadow: 0 12px 34px rgba(60, 64, 67, 0.12);
+        }
+
+        html, body, [class*="css"], .stMarkdown, [data-testid="stAppViewContainer"] {
             font-family: 'Inter', sans-serif !important;
         }
 
-        /* ── STANDARD (LYST TEMA - GEMINI STYLE) ── */
+        .stApp {
+            background:
+                radial-gradient(circle at top left, rgba(26, 115, 232, 0.16), transparent 28rem),
+                radial-gradient(circle at top right, rgba(161, 66, 244, 0.14), transparent 30rem),
+                var(--gemini-bg);
+            color: var(--gemini-text);
+        }
+
+        section.main > div {
+            max-width: 1180px;
+            padding-top: 1.25rem;
+        }
+
         h1 {
             font-weight: 700 !important;
-            color: #1F1F1F !important;
+            color: var(--gemini-text) !important;
             letter-spacing: -0.04em !important;
+            line-height: 1.04 !important;
         }
+
         h2, h3, .stMarkdown, p, span, label {
-            color: #1F1F1F !important;
+            color: var(--gemini-text) !important;
         }
+
+        [data-testid="stSidebar"] {
+            background: color-mix(in srgb, var(--gemini-surface) 88%, transparent) !important;
+            border-right: 1px solid var(--gemini-border);
+        }
+
+        [data-testid="stMetric"], .travel-card, [data-testid="stExpander"] {
+            background: color-mix(in srgb, var(--gemini-surface) 94%, transparent) !important;
+            border: 1px solid var(--gemini-border) !important;
+            border-radius: var(--gemini-radius) !important;
+            box-shadow: var(--gemini-shadow);
+        }
+
+        [data-testid="stMetric"] {
+            padding: 1rem;
+        }
+
         .streamlit-expanderHeader {
-            background-color: #F0F4F9 !important; /* Gemini lys gråblå */
-            border: 1px solid #E1E3E1 !important;
-            color: #1F1F1F !important;
-            border-radius: 8px !important;
+            background-color: var(--gemini-surface-2) !important;
+            color: var(--gemini-text) !important;
+            border-radius: var(--gemini-radius) !important;
         }
 
-        /* ── MØRKT TEMA (DARK MODE - GEMINI STYLE) ── */
+        .travel-card {
+            min-height: 205px;
+            padding: 1.05rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .travel-card h3 {
+            margin-top: 0;
+            font-size: 1.05rem;
+        }
+
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 0.35rem;
+            overflow-x: auto;
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            background: var(--gemini-surface-2);
+            border-radius: 999px;
+            padding: 0.45rem 1rem;
+        }
+
+        .stTabs [aria-selected="true"] {
+            background: linear-gradient(135deg, rgba(26,115,232,0.16), rgba(161,66,244,0.16));
+            color: var(--gemini-blue) !important;
+        }
+
         @media (prefers-color-scheme: dark) {
-            h1 {
-                color: #F0F4F9 !important;
+            :root {
+                --gemini-bg: #0B0F19;
+                --gemini-surface: #131722;
+                --gemini-surface-2: #1E2430;
+                --gemini-text: #E8EAED;
+                --gemini-muted: #BDC1C6;
+                --gemini-border: #2D3544;
+                --gemini-shadow: 0 16px 36px rgba(0, 0, 0, 0.32);
             }
-            h2, h3, .stMarkdown, p, span, label {
-                color: #E3E3E3 !important; /* Den myke Gemini-hvite */
-            }
-            .streamlit-expanderHeader {
-                background-color: #1E1E24 !important; /* Dyp matt tone */
-                border: 1px solid #2D2F36 !important;
-                color: #E3E3E3 !important;
+
+            h1, h2, h3, .stMarkdown, p, span, label {
+                color: var(--gemini-text) !important;
             }
         }
 
-        /* ── PREMIUM KNAPPER (FELLES) ── */
         .stLinkButton > a {
-            background-color: #0F172A !important;
+            background: linear-gradient(135deg, var(--gemini-blue), var(--gemini-purple)) !important;
             color: #FFFFFF !important;
-            border-radius: 6px !important;
+            border-radius: 999px !important;
             border: none !important;
-            padding: 0.6rem 1.5rem !important;
-            font-weight: 500 !important;
+            padding: 0.65rem 1.25rem !important;
+            font-weight: 650 !important;
             text-decoration: none !important;
+            box-shadow: 0 8px 24px rgba(26, 115, 232, 0.25);
         }
+
         .stLinkButton > a:hover {
-            background-color: #1E293B !important;
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+        }
+
+        button[kind="primary"] {
+            border-radius: 999px !important;
+            background: linear-gradient(135deg, var(--gemini-blue), var(--gemini-purple)) !important;
+        }
+
+        @media (max-width: 768px) {
+            section.main > div {
+                padding-left: 0.85rem;
+                padding-right: 0.85rem;
+            }
+
+            h1 {
+                font-size: 2rem !important;
+            }
+
+            .travel-card {
+                min-height: auto;
+            }
         }
 
         header {background: rgba(0,0,0,0) !important;}
@@ -297,11 +284,6 @@ HEADERS = {
     "HTTP-Referer": "https://localhost:8501",
     "X-Title": "Hemmelige Europa",
 }
-
-if "reisehistorikk" not in st.session_state:
-    st.session_state.reisehistorikk = []
-if "reise_chat" not in st.session_state:
-    st.session_state.reise_chat = []
 
 # ========================================
 # FUNKSJONER
@@ -346,7 +328,7 @@ def hent_koordinater_for_sok(sted):
         data = r.json()
         if data:
             return float(data[0]["lat"]), float(data[0]["lon"])
-    except:
+    except Exception:
         pass
     return None, None
 
@@ -359,14 +341,15 @@ def generer_reiseekspert_stream(sporsmal, kontekst=""):
 
     # RAG: Sjekk om spørsmålet nevner land eller byer fra vår eksterne databasefil
     relevante_perler = []
-    for p in SKJULTE_PERLER:
-        if p["land"].lower() in sporsmal.lower() or p["by"].lower() in sporsmal.lower():
+    sporsmal_lav = sporsmal.lower()
+    for p in SKJULTE_PERLER_DB:
+        if p["land"].lower() in sporsmal_lav or p["by"].lower() in sporsmal_lav:
             relevante_perler.append(
                 f"- {p['navn']} ({p['by']}, {p['land']}): {p['beskrivelse']} (Tips: {p['tips']})"
             )
 
-    for s in LOKALE_SPISESTEDER:
-        if s["land"].lower() in sporsmal.lower() or s["by"].lower() in sporsmal.lower():
+    for s in LOKALE_SPISESTEDER_DB:
+        if s["land"].lower() in sporsmal_lav or s["by"].lower() in sporsmal_lav:
             relevante_perler.append(
                 f"- Spisested: {s['navn']} ({s['by']}, {s['land']}): {s['beskrivelse']} (Pris: {s['pris']})"
             )
@@ -409,7 +392,7 @@ def generer_reiseekspert_stream(sporsmal, kontekst=""):
                     content = chunk["choices"][0]["delta"].get("content", "")
                     if content:
                         yield content
-                except:
+                except Exception:
                     continue
     except Exception as e:
         yield f"Kunne ikke kontakte reiseeksperten. Feilmelding: {str(e)}"
@@ -438,6 +421,98 @@ def finn_lignende_steder(historikk, alle_steder):
     return anbefalinger[:5]
 
 
+def bygg_booking_url(by, land):
+    partner_aid = st.secrets.get("BOOKING_AID", "888888")
+    query = urlencode({"ss": f"{by}, {land}", "aid": partner_aid})
+    return f"https://www.booking.com/searchresults.html?{query}"
+
+
+def render_place_actions(place, source_view, key_prefix):
+    booking_url = bygg_booking_url(place["by"], place["land"])
+    col_add, col_booking = st.columns(2)
+    with col_add:
+        if st.button(T["favoritt_knapp"], key=f"{key_prefix}_add_{place['id']}", use_container_width=True):
+            add_itinerary_item(place)
+            st.success(T["favoritt_lagt_til"])
+    with col_booking:
+        if st.button(T["booking_register_click"], key=f"{key_prefix}_booking_{place['id']}", use_container_width=True):
+            log_affiliate_click(place, source_view, spraak, booking_url)
+            st.session_state[f"booking_url_{key_prefix}_{place['id']}"] = booking_url
+            st.success(T["affiliate_logget"])
+
+    if st.session_state.get(f"booking_url_{key_prefix}_{place['id']}"):
+        st.caption(T["affiliate_disclosure"])
+        st.link_button(
+            f"{T['booking_open_link']} {place['by']}",
+            st.session_state[f"booking_url_{key_prefix}_{place['id']}"] ,
+            use_container_width=True,
+        )
+
+
+def lag_radar_kart(treff_liste, sentrum=None, sentrum_navn=""):
+    if sentrum:
+        m = folium.Map(location=[sentrum[0], sentrum[1]], zoom_start=7, tiles="OpenStreetMap")
+        folium.Marker(
+            location=[sentrum[0], sentrum[1]],
+            tooltip=sentrum_navn,
+            icon=folium.Icon(color="blue", icon="search"),
+        ).add_to(m)
+    else:
+        m = folium.Map(location=[54.0, 14.0], zoom_start=4, tiles="OpenStreetMap")
+
+    for treff in treff_liste:
+        place = treff["data"]
+        color = "green" if place.get("source_type") == "restaurant" else "red"
+        icon = "cutlery" if place.get("source_type") == "restaurant" else "star"
+        popup = f"<b>{place['navn']}</b><br>{place['by']}, {place['land']}<br>{treff['avstand']} km"
+        folium.Marker(
+            location=[place["latitude"], place["longitude"]],
+            tooltip=f"{place['navn']} ({place['by']})",
+            popup=popup,
+            icon=folium.Icon(color=color, icon=icon),
+        ).add_to(m)
+    return m
+
+
+def lag_reiseplan_html(items):
+    rows = []
+    for item in items:
+        rows.append(
+            f"<li><strong>{item['navn']}</strong> – {item['by']}, {item['land']}<br>{item['beskrivelse']}</li>"
+        )
+    return f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; padding: 32px;">
+        <h1>Hemmelige Europa – reiseplan</h1>
+        <ol>{''.join(rows)}</ol>
+    </body>
+    </html>
+    """
+
+
+def generer_ai_reiserute(items, dager):
+    if not items:
+        yield T["reiseplan_tom"]
+        return
+
+    steder = "\n".join(
+        [
+            f"- {item['navn']} ({item['by']}, {item['land']}): {item['beskrivelse']} Tips: {item.get('tips', '')}"
+            for item in items
+        ]
+    )
+    prompt = (
+        f"Lag en konkret {dager}-dagers reiserute basert på disse lagrede Radar/favoritt-stedene. "
+        "Prioriter korte transportetapper, skjulte perler, lokale spisesteder og naturlige Booking.com-overnattingsforslag. "
+        f"Svar på {'norsk' if spraak == 'NO' else 'English'}.\n\n{steder}"
+    )
+    yield from generer_reiseekspert_stream(prompt)
+
+
+SKJULTE_PERLER_DB = get_places("hidden_gem")
+LOKALE_SPISESTEDER_DB = get_places("restaurant")
+
+
 # ========================================
 # APPLIKASJONSSTRUKTUR (UI)
 # ========================================
@@ -445,7 +520,14 @@ st.title(T["app_tittel"])
 st.caption(T["app_caption"])
 
 fane = st.tabs(
-    [T["fane_hjem"], T["fane_perler"], T["fane_mat"], T["fane_radar"], T["fane_chat"]]
+    [
+        T["fane_radar"],
+        T["fane_hjem"],
+        T["fane_perler"],
+        T["fane_mat"],
+        T["reiseplan_fane"],
+        T["fane_chat"],
+    ]
 )
 
 
@@ -454,241 +536,21 @@ def filtrer_data(data):
     return [d for d in data if "latitude" in d and "longitude" in d]
 
 
-# --- FANE 0: HJEM ---
+# ========================================================
+# FANE 0: RADAREN (MED GPS- OG LANDSØK) — vises først
+# ========================================================
 with fane[0]:
-    st.header(T["hjem_header"])
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric(T["hjem_metric_perler"], len(SKJULTE_PERLER))
-    with col2:
-        st.metric(T["hjem_metric_spisesteder"], len(LOKALE_SPISESTEDER))
-    with col3:
-        st.metric(T["hjem_metric_land"], len(set(s["land"] for s in SKJULTE_PERLER)))
-
-    st.divider()
-
-    col_velg, col_knapp = st.columns([3, 1])
-    with col_velg:
-        alle_tekst = T["perler_alle"]
-        land_valg = st.selectbox(
-            T["hjem_filter_land"],
-            [alle_tekst] + sorted(list(set(s["land"] for s in SKJULTE_PERLER))),
-        )
-    with col_knapp:
-        st.write("<br>", unsafe_allow_html=True)
-        trykk_tips = st.button(
-            T["hjem_knapp_tilfeldig"], use_container_width=True, type="primary"
-        )
-
-    if trykk_tips:
-        tips = (
-            [t for t in SKJULTE_PERLER if t["land"] == land_valg]
-            if land_valg != alle_tekst
-            else SKJULTE_PERLER
-        )
-        if tips:
-            t = random.choice(tips)
-            st.success(f"### 🌟 {t['navn']}")
-
-            col_b1, col_b2 = st.columns(2)
-            with col_b1:
-                st.markdown(
-                    f"{T['hjem_sted']} {t['by']}, {t['land']}  \n{T['hjem_kategori']} {t['type'].capitalize()}"
-                )
-                st.write(t["beskrivelse"])
-                st.info(f"{T['hjem_tips']} {t['tips']}")
-                beste_tidspunkt = t.get("beste_tid", "mai-september (eller hele året)")
-                st.caption(f"{T['hjem_beste_tid']} {beste_tidspunkt}")
-
-            with col_b2:
-                if "latitude" in t and "longitude" in t:
-                    st.markdown(f"**{T['hjem_kart']}**")
-                    kart_data = {"lat": [t["latitude"]], "lon": [t["longitude"]]}
-                    st.map(kart_data, zoom=6)
-                else:
-                    st.info(T["hjem_ingen_kart"])
-
-# --- FANE 1: SKJULTE PERLER ---
-with fane[1]:
-    st.header(T["perler_header"])
-
-    with st.expander(T["perler_kart_expander"], expanded=False):
-        perler_med_koordinater = [
-            p for p in SKJULTE_PERLER if "latitude" in p and "longitude" in p
-        ]
-        if perler_med_koordinater:
-            kart_df = pd.DataFrame(perler_med_koordinater)
-
-            m = folium.Map(location=[54.0, 14.0], zoom_start=4, tiles="OpenStreetMap")
-
-            for _, row in kart_df.iterrows():
-                folium.CircleMarker(
-                    location=[row["latitude"], row["longitude"]],
-                    radius=3.5,
-                    weight=1,
-                    color="#E63232",
-                    fill=True,
-                    fill_color="#E63232",
-                    fill_opacity=0.8,
-                    tooltip=f"<b>🏛️ {row['navn']}</b><br>📍 {row['by']}, {row['land']}",
-                ).add_to(m)
-
-            st_folium(m, width=700, height=500, returned_objects=[])
-            st.caption(
-                T["perler_kart_caption"].format(
-                    len(perler_med_koordinater), len(SKJULTE_PERLER)
-                )
-            )
-
-            st.write(f"### {T['perler_reisemal_header']}")
-
-            if not kart_df.empty:
-                unike_land = sorted(kart_df["land"].unique())
-
-                for land in unike_land:
-                    land_df = kart_df[kart_df["land"] == land].sort_values(by="by")
-                    antall_perler = len(land_df)
-
-                    with st.expander(f"🌍 {land.upper()} ({antall_perler} reisemål)"):
-                        for _, row in land_df.iterrows():
-                            by_navn = row.get("by", "Ukjent by")
-                            sted_navn = row.get("navn", "Hemmelig sted")
-
-                            with st.container(border=True):
-                                st.markdown(f"#### 🏛️ {sted_navn}")
-                                st.caption(f"📍 {by_navn}, {land}")
-
-                                beskrivelse = row.get(
-                                    "beskrivelse",
-                                    "Ingen beskrivelse tilgjengelig ennå for dette unike stedet.",
-                                )
-                                st.write(beskrivelse)
-
-                                st.write("")
-
-                                by_kodet = by_navn.replace(" ", "+")
-                                land_kodet = land.replace(" ", "+")
-                                booking_url = f"https://www.booking.com/searchresults.html?ss={by_kodet},+{land_kodet}"
-
-                                st.link_button(
-                                    T["perler_booking"],
-                                    booking_url,
-                                    use_container_width=True,
-                                )
-            else:
-                st.info(T["perler_ingen_reisemal"])
-        else:
-            st.info(T["perler_ingen_koordinater"])
-
-    col_s1, col_s2 = st.columns(2)
-    with col_s1:
-        sok_perle = st.text_input(T["perler_sok"], "").lower()
-    with col_s2:
-        type_perle = st.selectbox(
-            T["perler_sorter_type"],
-            [T["perler_alle"]] + sorted(list(set(p["type"] for p in SKJULTE_PERLER))),
-        )
-
-    st.write("---")
-
-    filtrerte_perler = []
-    for perle in SKJULTE_PERLER:
-        if type_perle != T["perler_alle"] and perle["type"] != type_perle:
-            continue
-        if sok_perle and (
-            sok_perle not in perle["navn"].lower()
-            and sok_perle not in perle["by"].lower()
-        ):
-            continue
-        filtrerte_perler.append(perle)
-
-    if filtrerte_perler:
-        for i in range(0, len(filtrerte_perler), 3):
-            cols = st.columns(3)
-            for j in range(3):
-                if i + j < len(filtrerte_perler):
-                    p = filtrerte_perler[i + j]
-                    with cols[j]:
-                        st.markdown(
-                            f"""
-                        <div class="travel-card">
-                            <h3>🏛️ {p["navn"]}</h3>
-                            <p><b>📍 {p["by"]}, {p["land"]}</b> • <i>{p["type"].capitalize()}</i></p>
-                            <p>{p["beskrivelse"]}</p>
-                        </div>
-                        """,
-                            unsafe_allow_html=True,
-                        )
-                        st.info(f"💡 {p['tips']}")
-                        if "beste_tid" in p and p["beste_tid"]:
-                            st.caption(f"🕐 Beste tid: {p['beste_tid']}")
-                            st.write("<br>", unsafe_allow_html=True)
-    else:
-        st.info(T["perler_ingen_treff"])
-
-# --- FANE 2: MAT ---
-with fane[2]:
-    st.header(T["mat_header"])
-
-    col_m1, col_m2 = st.columns(2)
-    with col_m1:
-        sok_mat = st.text_input(T["mat_sok"], "").lower()
-    with col_m2:
-        type_mat = st.selectbox(
-            T["mat_sorter_type"],
-            [T["perler_alle"]]
-            + sorted(list(set(m["type"] for m in LOKALE_SPISESTEDER))),
-        )
-
-    st.write("---")
-
-    filtrert_mat = []
-    for sted in LOKALE_SPISESTEDER:
-        if type_mat != T["perler_alle"] and sted["type"] != type_mat:
-            continue
-        if sok_mat and (
-            sok_mat not in sted["navn"].lower() and sok_mat not in sted["by"].lower()
-        ):
-            continue
-        filtrert_mat.append(sted)
-
-    if filtrert_mat:
-        for i in range(0, len(filtrert_mat), 3):
-            cols = st.columns(3)
-            for j in range(3):
-                if i + j < len(filtrert_mat):
-                    s = filtrert_mat[i + j]
-                    with cols[j]:
-                        st.markdown(
-                            f"""
-                        <div class="travel-card">
-                            <h3>🍽️ {s["navn"]}</h3>
-                            <p><b>📍 {s["by"]}, {s["land"]}</b> • <i>{s["type"].capitalize()}</i></p>
-                            <p>{s["beskrivelse"]}</p>
-                        </div>
-                        """,
-                            unsafe_allow_html=True,
-                        )
-                        st.success(f"{T['mat_pris']} {s['pris']}")
-                        st.write("<br>", unsafe_allow_html=True)
-    else:
-        st.info(T["mat_ingen_treff"])
-
-# ========================================================
-# FANE 3: RADAREN (MED GPS- OG LANDSØK)
-# ========================================================
-with fane[3]:
     st.subheader(T["radar_tittel"])
     st.write(T["radar_sub"])
 
-    alle_steder_i_db = SKJULTE_PERLER + LOKALE_SPISESTEDER
+    alle_steder_i_db = SKJULTE_PERLER_DB + LOKALE_SPISESTEDER_DB
     filtrert_for_radar = filtrer_data(alle_steder_i_db)
 
     if filtrert_for_radar:
-        # 1. Velg søkemetode (Posisjon eller Land)
+        # 1. Velg søkemetode (Plassering, Posisjon eller Land)
         soke_metode = st.radio(
             T["radar_metode"],
-            options=[T["radar_gps"], T["radar_land_sok"]],
+            options=[T["radar_sted_sok"], T["radar_gps"], T["radar_land_sok"]],
             horizontal=True,
         )
 
@@ -697,9 +559,31 @@ with fane[3]:
         )
         perler_i_naerheten = []
         soke_sentrum_navn = ""
+        soke_sentrum = None
 
         # 2. LOGIKK FOR Å HENTE SØKESENTRUM
-        if soke_metode == T["radar_gps"]:
+        if soke_metode == T["radar_sted_sok"]:
+            sted_sok = st.text_input(
+                T["radar_sted_input"],
+                placeholder=T["radar_sted_placeholder"],
+                key="radar_sted_sok_input",
+            )
+            if sted_sok:
+                min_lat, min_lon = hent_koordinater_for_sok(sted_sok)
+                soke_sentrum_navn = sted_sok
+                if min_lat and min_lon:
+                    soke_sentrum = (min_lat, min_lon)
+                    for perle in filtrert_for_radar:
+                        avstand = regn_ut_avstand_km(
+                            min_lat, min_lon, perle["latitude"], perle["longitude"]
+                        )
+                        if avstand <= maks_avstand:
+                            perler_i_naerheten.append(
+                                {"data": perle, "avstand": round(avstand, 1)}
+                            )
+                else:
+                    st.warning(T["radar_sted_warning"])
+        elif soke_metode == T["radar_gps"]:
             with st.spinner(T["radar_spinner"]):
                 geo = get_geolocation()
 
@@ -707,6 +591,7 @@ with fane[3]:
                 min_lat = geo["coords"]["latitude"]
                 min_lon = geo["coords"]["longitude"]
                 soke_sentrum_navn = T["radar_sentrum_gps"]
+                soke_sentrum = (min_lat, min_lon)
 
                 # Beregn avstand fra GPS-punktet til alle perler i regionen
                 for perle in filtrert_for_radar:
@@ -744,6 +629,12 @@ with fane[3]:
                 st.markdown(
                     f"### {T['radar_fant']} {len(perler_i_naerheten)} {T['radar_destinasjoner']} {soke_sentrum_navn}"
                 )
+                st_folium(
+                    lag_radar_kart(perler_i_naerheten, soke_sentrum, soke_sentrum_navn),
+                    width=1100,
+                    height=520,
+                    returned_objects=[],
+                )
 
                 for treff in perler_i_naerheten:
                     p = treff["data"]
@@ -764,29 +655,283 @@ with fane[3]:
                         if "tips" in p:
                             st.markdown(f"*📌 **{T['radar_tips']}:** {p['tips']}*")
 
-                        # 🔒 Sikker kommersiell affiliate-lenke
-                        try:
-                            partner_aid = st.secrets["BOOKING_AID"]
-                        except Exception:
-                            partner_aid = "888888"
-
-                        by_kodet = p["by"].replace(" ", "+")
-                        land_kodet = p["land"].replace(" ", "+")
-                        booking_url = f"https://www.booking.com/searchresults.html?ss={by_kodet},+{land_kodet}&aid={partner_aid}"
-
-                        st.link_button(
-                            f"{T['radar_booking']} {p['by']}",
-                            booking_url,
-                            use_container_width=True,
-                        )
+                        render_place_actions(p, "radar", "radar")
             else:
                 st.info(T["radar_ingen_treff"])
     else:
         st.write(T["radar_ingen_data"])
 
 
-# --- FANE 4: REISE-CHAT ---
+# --- FANE 1: HJEM ---
+with fane[1]:
+    st.header(T["hjem_header"])
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric(T["hjem_metric_perler"], len(SKJULTE_PERLER_DB))
+    with col2:
+        st.metric(T["hjem_metric_spisesteder"], len(LOKALE_SPISESTEDER_DB))
+    with col3:
+        st.metric(T["hjem_metric_land"], len(set(s["country_code"] or s["land"] for s in SKJULTE_PERLER_DB)))
+
+    st.divider()
+
+    col_velg, col_knapp = st.columns([3, 1])
+    with col_velg:
+        alle_tekst = T["perler_alle"]
+        land_valg = st.selectbox(
+            T["hjem_filter_land"],
+            [alle_tekst] + sorted(list(set(s["land"] for s in SKJULTE_PERLER_DB))),
+        )
+    with col_knapp:
+        st.write("<br>", unsafe_allow_html=True)
+        trykk_tips = st.button(
+            T["hjem_knapp_tilfeldig"], use_container_width=True, type="primary"
+        )
+
+    if trykk_tips:
+        tips = (
+            [t for t in SKJULTE_PERLER_DB if t["land"] == land_valg]
+            if land_valg != alle_tekst
+            else SKJULTE_PERLER_DB
+        )
+        if tips:
+            t = random.choice(tips)
+            st.success(f"### 🌟 {t['navn']}")
+
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                st.markdown(
+                    f"{T['hjem_sted']} {t['by']}, {t['land']}  \n{T['hjem_kategori']} {t['type'].capitalize()}"
+                )
+                st.write(t["beskrivelse"])
+                st.info(f"{T['hjem_tips']} {t['tips']}")
+                beste_tidspunkt = t.get("beste_tid", "mai-september (eller hele året)")
+                st.caption(f"{T['hjem_beste_tid']} {beste_tidspunkt}")
+
+            with col_b2:
+                if "latitude" in t and "longitude" in t:
+                    st.markdown(f"**{T['hjem_kart']}**")
+                    kart_data = {"lat": [t["latitude"]], "lon": [t["longitude"]]}
+                    st.map(kart_data, zoom=6)
+                else:
+                    st.info(T["hjem_ingen_kart"])
+
+
+# --- FANE 2: SKJULTE PERLER ---
+with fane[2]:
+    st.header(T["perler_header"])
+
+    with st.expander(T["perler_kart_expander"], expanded=False):
+        perler_med_koordinater = [
+            p for p in SKJULTE_PERLER_DB if "latitude" in p and "longitude" in p
+        ]
+        if perler_med_koordinater:
+            kart_df = pd.DataFrame(perler_med_koordinater)
+
+            m = folium.Map(location=[54.0, 14.0], zoom_start=4, tiles="OpenStreetMap")
+
+            for _, row in kart_df.iterrows():
+                folium.CircleMarker(
+                    location=[row["latitude"], row["longitude"]],
+                    radius=3.5,
+                    weight=1,
+                    color="#E63232",
+                    fill=True,
+                    fill_color="#E63232",
+                    fill_opacity=0.8,
+                    tooltip=f"<b>🏛️ {row['navn']}</b><br>📍 {row['by']}, {row['land']}",
+                ).add_to(m)
+
+            st_folium(m, width=700, height=500, returned_objects=[])
+            st.caption(
+                T["perler_kart_caption"].format(
+                    len(perler_med_koordinater), len(SKJULTE_PERLER_DB)
+                )
+            )
+
+            st.write(f"### {T['perler_reisemal_header']}")
+
+            if not kart_df.empty:
+                unike_land = sorted(kart_df["land"].unique())
+
+                for land in unike_land:
+                    land_df = kart_df[kart_df["land"] == land].sort_values(by="by")
+                    antall_perler = len(land_df)
+
+                    with st.expander(f"🌍 {land.upper()} ({antall_perler} reisemål)"):
+                        for _, row in land_df.iterrows():
+                            by_navn = row.get("by", "Ukjent by")
+                            sted_navn = row.get("navn", "Hemmelig sted")
+
+                            with st.container(border=True):
+                                st.markdown(f"#### 🏛️ {sted_navn}")
+                                st.caption(f"📍 {by_navn}, {land}")
+
+                                beskrivelse = row.get(
+                                    "beskrivelse",
+                                    "Ingen beskrivelse tilgjengelig ennå for dette unike stedet.",
+                                )
+                                st.write(beskrivelse)
+
+                                st.write("")
+
+                                booking_url = bygg_booking_url(by_navn, land)
+
+                                st.link_button(
+                                    T["perler_booking"],
+                                    booking_url,
+                                    use_container_width=True,
+                                )
+            else:
+                st.info(T["perler_ingen_reisemal"])
+        else:
+            st.info(T["perler_ingen_koordinater"])
+
+    col_s1, col_s2 = st.columns(2)
+    with col_s1:
+        sok_perle = st.text_input(T["perler_sok"], "").lower()
+    with col_s2:
+        type_perle = st.selectbox(
+            T["perler_sorter_type"],
+            [T["perler_alle"]] + sorted(list(set(p["type"] for p in SKJULTE_PERLER_DB))),
+        )
+
+    st.write("---")
+
+    filtrerte_perler = []
+    for perle in SKJULTE_PERLER_DB:
+        if type_perle != T["perler_alle"] and perle["type"] != type_perle:
+            continue
+        if sok_perle and (
+            sok_perle not in perle["navn"].lower()
+            and sok_perle not in perle["by"].lower()
+        ):
+            continue
+        filtrerte_perler.append(perle)
+
+    if filtrerte_perler:
+        for i in range(0, len(filtrerte_perler), 3):
+            cols = st.columns(3)
+            for j in range(3):
+                if i + j < len(filtrerte_perler):
+                    p = filtrerte_perler[i + j]
+                    with cols[j]:
+                        st.markdown(
+                            f"""
+                        <div class="travel-card">
+                            <h3>🏛️ {p["navn"]}</h3>
+                            <p><b>📍 {p["by"]}, {p["land"]}</b> • <i>{p["type"].capitalize()}</i></p>
+                            <p>{p["beskrivelse"]}</p>
+                        </div>
+                        """,
+                            unsafe_allow_html=True,
+                        )
+                        st.info(f"💡 {p['tips']}")
+                        if "beste_tid" in p and p["beste_tid"]:
+                            st.caption(f"🕐 Beste tid: {p['beste_tid']}")
+                        render_place_actions(p, "hidden_gems", "perle")
+                        st.write("<br>", unsafe_allow_html=True)
+    else:
+        st.info(T["perler_ingen_treff"])
+
+
+# --- FANE 3: MAT ---
+with fane[3]:
+    st.header(T["mat_header"])
+
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        sok_mat = st.text_input(T["mat_sok"], "").lower()
+    with col_m2:
+        type_mat = st.selectbox(
+            T["mat_sorter_type"],
+            [T["perler_alle"]]
+            + sorted(list(set(m["type"] for m in LOKALE_SPISESTEDER_DB))),
+        )
+
+    st.write("---")
+
+    filtrert_mat = []
+    for sted in LOKALE_SPISESTEDER_DB:
+        if type_mat != T["perler_alle"] and sted["type"] != type_mat:
+            continue
+        if sok_mat and (
+            sok_mat not in sted["navn"].lower() and sok_mat not in sted["by"].lower()
+        ):
+            continue
+        filtrert_mat.append(sted)
+
+    if filtrert_mat:
+        for i in range(0, len(filtrert_mat), 3):
+            cols = st.columns(3)
+            for j in range(3):
+                if i + j < len(filtrert_mat):
+                    s = filtrert_mat[i + j]
+                    with cols[j]:
+                        st.markdown(
+                            f"""
+                        <div class="travel-card">
+                            <h3>🍽️ {s["navn"]}</h3>
+                            <p><b>📍 {s["by"]}, {s["land"]}</b> • <i>{s["type"].capitalize()}</i></p>
+                            <p>{s["beskrivelse"]}</p>
+                        </div>
+                        """,
+                            unsafe_allow_html=True,
+                        )
+                        st.success(f"{T['mat_pris']} {s['pris']}")
+                        render_place_actions(s, "food", "mat")
+                        st.write("<br>", unsafe_allow_html=True)
+    else:
+        st.info(T["mat_ingen_treff"])
+
+
+# --- FANE 4: REISEPLAN ---
 with fane[4]:
+    st.header(T["reiseplan_header"])
+    itinerary_items = get_itinerary_items()
+
+    if not itinerary_items:
+        st.info(T["reiseplan_tom"])
+    else:
+        st.download_button(
+            T["reiseplan_last_ned"],
+            data=lag_reiseplan_html(itinerary_items),
+            file_name="hemmelige-europa-reiseplan.html",
+            mime="text/html",
+            use_container_width=True,
+        )
+
+        if any("latitude" in item and "longitude" in item for item in itinerary_items):
+            m = folium.Map(location=[54.0, 14.0], zoom_start=4, tiles="OpenStreetMap")
+            for item in itinerary_items:
+                if item.get("latitude") and item.get("longitude"):
+                    folium.Marker(
+                        location=[item["latitude"], item["longitude"]],
+                        tooltip=f"{item['navn']} ({item['by']})",
+                        popup=f"<b>{item['navn']}</b><br>{item['by']}, {item['land']}",
+                    ).add_to(m)
+            st_folium(m, width=1100, height=460, returned_objects=[])
+
+        for item in itinerary_items:
+            with st.container(border=True):
+                st.markdown(f"### {item['navn']}")
+                st.caption(f"{item['by']}, {item['land']} • {item['type']}")
+                st.write(item["beskrivelse"])
+                col_link, col_remove = st.columns(2)
+                with col_link:
+                    render_place_actions(item, "itinerary", "reiseplan")
+                with col_remove:
+                    if st.button("🗑️ Fjern", key=f"remove_{item['id']}", use_container_width=True):
+                        remove_itinerary_item(item["id"])
+                        st.rerun()
+
+        dager = st.slider(T["reiseplan_ai_prompt"], min_value=1, max_value=14, value=5)
+        if st.button(T["reiseplan_ai"], type="primary", use_container_width=True):
+            st.write_stream(generer_ai_reiserute(itinerary_items, dager))
+
+
+# --- FANE 5: REISE-CHAT ---
+with fane[5]:
     st.header(T["chat_header"])
     st.caption(T["chat_caption"])
 
@@ -900,7 +1045,6 @@ with fane[4]:
                 "sted": sted_for_kart,
             }
         )
-        st.rerun()
 
 # ========================================
 # FOOTER
