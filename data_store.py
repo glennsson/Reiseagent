@@ -3,7 +3,16 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from database import LOKALE_SPISESTEDER, SKJULTE_PERLER
+from database import LOKALE_SPISESTEDER, SKJULTE_PERLER, SPANIA_MARKEDSDATA
+
+# Profilinteresser (UI) → interne DB-kategorier
+PROFIL_TIL_DB_TYPE = {
+    "Mat & Vin": "gastronomi",
+    "Kultur & Historie": "kultur",
+    "Natur & Aktivitet": "natur",
+    "Golf": "golf",
+    "Sport": "sport",
+}
 
 DB_PATH = Path(__file__).with_name("hemmelige_europa.sqlite3")
 
@@ -109,22 +118,50 @@ def make_place_id(sted, source_type):
     return raw.lower().replace(" ", "-")
 
 
+def _forbered_spania_sted(sted):
+    """Mapper kuraterte Spania-poster til DB-format med profil_kategori."""
+    sted = dict(sted)
+    profil_kategori = sted.get("profil_kategori") or sted.get("type", "")
+    if profil_kategori in PROFIL_TIL_DB_TYPE:
+        sted["profil_kategori"] = profil_kategori
+        sted["type"] = PROFIL_TIL_DB_TYPE[profil_kategori]
+    return sted
+
+
+def _spania_skjulte_perler():
+    return [
+        _forbered_spania_sted(s)
+        for s in SPANIA_MARKEDSDATA
+        if str(s.get("id", "")).startswith("es_gem")
+    ]
+
+
+def _spania_restauranter():
+    return [
+        _forbered_spania_sted(s)
+        for s in SPANIA_MARKEDSDATA
+        if str(s.get("id", "")).startswith("es_rest")
+    ]
+
+
 def normalize_place(sted, source_type):
     country = sted.get("land", "")
     country_code = sted.get("country_code", LAND_KODER.get(country, ""))
     place = {
-        "id": make_place_id(sted, source_type),
+        "id": sted.get("id") or make_place_id(sted, source_type),
         "navn": sted.get("navn", ""),
         "by": sted.get("by", ""),
         "land": country,
         "country_code": country_code,
         "type": sted.get("type", ""),
+        "profil_kategori": sted.get("profil_kategori", ""),
         "beskrivelse": sted.get("beskrivelse", ""),
         "tips": sted.get("tips", ""),
         "beste_tid": sted.get("beste_tid", ""),
         "pris": sted.get("pris", "€"),
         "latitude": sted.get("latitude"),
         "longitude": sted.get("longitude"),
+        "image_url": sted.get("image_url", ""),
         "source_type": source_type,
     }
     place["search_key"] = " ".join(
@@ -134,6 +171,7 @@ def normalize_place(sted, source_type):
             place["land"],
             place["country_code"],
             place["type"],
+            place.get("profil_kategori", ""),
             place["source_type"],
         ]
     ).lower()
@@ -142,8 +180,10 @@ def normalize_place(sted, source_type):
 
 def seed_places():
     init_db()
-    places = [normalize_place(p, "hidden_gem") for p in SKJULTE_PERLER]
-    places += [normalize_place(p, "restaurant") for p in LOKALE_SPISESTEDER]
+    skjulte_kilde = list(SKJULTE_PERLER) + _spania_skjulte_perler()
+    restaurant_kilde = list(LOKALE_SPISESTEDER) + _spania_restauranter()
+    places = [normalize_place(p, "hidden_gem") for p in skjulte_kilde]
+    places += [normalize_place(p, "restaurant") for p in restaurant_kilde]
     with get_connection() as conn:
         for place in places:
             conn.execute(
@@ -176,7 +216,7 @@ def seed_places():
 
 
 def _row_to_place(row):
-    return {
+    place = {
         "id": row[0],
         "navn": row[1],
         "by": row[2],
@@ -191,14 +231,25 @@ def _row_to_place(row):
         "longitude": row[11],
         "source_type": row[12],
         "search_key": row[13],
+        "profil_kategori": "",
+        "image_url": "",
     }
+    if len(row) > 14 and row[14]:
+        try:
+            raw = json.loads(row[14])
+            place["profil_kategori"] = raw.get("profil_kategori", "") or ""
+            place["image_url"] = raw.get("image_url", "") or ""
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return place
 
 
 def get_places(source_type=None):
     seed_places()
     sql = """
         SELECT id, name, city, country, country_code, category, description,
-               tips, best_time, price, latitude, longitude, source_type, search_key
+               tips, best_time, price, latitude, longitude, source_type, search_key,
+               raw_json
         FROM places
     """
     params = []
@@ -292,6 +343,20 @@ def get_affiliate_stats(limit=5):
             ORDER BY clicks DESC, source_view
             """
         ).fetchall()
+        top_partners = conn.execute(
+            """
+            SELECT
+                CASE
+                    WHEN instr(source_view, ':') > 0
+                    THEN substr(source_view, instr(source_view, ':') + 1)
+                    ELSE 'booking'
+                END AS partner,
+                COUNT(*) AS clicks
+            FROM affiliate_clicks
+            GROUP BY partner
+            ORDER BY clicks DESC, partner
+            """
+        ).fetchall()
         latest_click = conn.execute(
             "SELECT clicked_at FROM affiliate_clicks ORDER BY clicked_at DESC LIMIT 1"
         ).fetchone()
@@ -313,6 +378,10 @@ def get_affiliate_stats(limit=5):
                 "clicks": row[1],
             }
             for row in top_sources
+        ],
+        "top_partners": [
+            {"partner": row[0], "clicks": row[1]}
+            for row in top_partners
         ],
         "latest_click": latest_click[0] if latest_click else None,
     }

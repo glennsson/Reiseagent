@@ -1,26 +1,9 @@
-[
-    {
-        "navn": "Røros",
-        "by": "Røros",
-        "land": "Norge",
-        "type": "kultur"
-    },
-    {
-        "navn": "Matera om natten",
-        "by": "Matera",
-        "land": "Italia",
-        "type": "kultur"
-    },
-    {
-        "navn": "Schlenkerla",
-        "by": "Bamberg",
-        "land": "Tyskland",
-        "type": "gastronomi"
-    },
-    {
-        "navn": "Sala Silvergruva",
-        "by": "Sala",
-        "land": "Sverige",
-        "type": "eventyr"
+{
+    "reisehistorikk": [],
+    "reise_chat": [],
+    "profil": {
+        "reise_folge": "Familie med barn",
+        "budsjett": "Medium",
+        "hovedinteresse": "Golf"
     }
-]
+}

@@ -64,7 +64,6 @@ SKJULTE_PERLER = [
     {"navn": "Café A Brasileira", "land": "Portugal", "by": "Lisboa", "type": "kafé", "beskrivelse": "Pessoas stamkafé.", "tips": "Bica.", "beste_tid": "hele året", "latitude": 38.7106, "longitude": -9.1419},
     # ========== SPANIA ==========
     {"navn": "Castellfollit de la Roca", "land": "Spania", "by": "Castellfollit", "type": "natur", "beskrivelse": "By på 50 m basaltklippe.", "tips": "Foto nedenfra.", "beste_tid": "mars-november", "latitude": 42.2192, "longitude": 2.5539},
-    {"navn": "Setenil de las Bodegas", "land": "Spania", "by": "Setenil", "type": "arkitektur", "beskrivelse": "Hus INN i klippene.", "tips": "Frokost under klippen.", "beste_tid": "mars-november", "latitude": 36.8639, "longitude": -5.1814},
     {"navn": "Las Médulas", "land": "Spania", "by": "Las Médulas", "type": "natur", "beskrivelse": "Mars-lignende landskap.", "tips": "Gå i tunnelene.", "beste_tid": "april-oktober", "latitude": 42.4606, "longitude": -6.7686},
     # ========== ITALIA ==========
     {"navn": "Matera om natten", "land": "Italia", "by": "Matera", "type": "kultur", "beskrivelse": "Europas eldste by.", "tips": "Bo i grottehotell.", "beste_tid": "april-oktober", "latitude": 40.6667, "longitude": 16.6000},
@@ -170,6 +169,84 @@ SKJULTE_PERLER = [
     {"navn": "Tykocin", "land": "Polen", "by": "Tykocin", "type": "jødisk historie", "beskrivelse": "En liten Podlasie-by med barokk torg, bevart synagoge og tung, viktig historie i et landskap få turister prioriterer.", "tips": "Besøk synagogen og spis regional mat før du drar videre mot Biebrza-myrene.", "beste_tid": "mai-september", "latitude": 53.2056, "longitude": 22.7742, "pris": "€"},
     {"navn": "Błędówørkenen", "land": "Polen", "by": "Klucze", "type": "ørkenlandskap", "beskrivelse": "Europas merkeligste innlandsørkenfølelse: sandflater og furuskog i Schlesien, en surreal kontrast til regionens industribyer.", "tips": "Start ved utsiktspunktet Czubatka og kom i gyllent kveldslys.", "beste_tid": "april-oktober", "latitude": 50.3361, "longitude": 19.5567, "pris": "€"},
 ]
+
+# ========================================
+# SPANIA – kuratert markedspakke for nordmenn (Costa Blanca, Andalucía m.m.)
+# type = profilinteresse; normaliseres til DB-kategori i data_store
+# ========================================
+SPANIA_MARKEDSDATA = [
+    {
+        "id": "es_gem_01",
+        "navn": "Setenil de las Bodegas",
+        "by": "Ronda/Cádiz",
+        "land": "Spania",
+        "country_code": "ES",
+        "type": "Kultur & Historie",
+        "latitude": 36.8639,
+        "longitude": -5.1812,
+        "beskrivelse": "En helt unik hvit landsby hvor husene er bygget direkte inn under massive overhengende klipper. Fjellet fungerer som naturlig beskyttelse mot solen.",
+        "tips": "Gå ned i gaten 'Cuevas del Sol' for å sitte under fjellet.",
+        "beste_tid": "Vår og høst.",
+        "pris": "€",
+    },
+    {
+        "id": "es_gem_02",
+        "navn": "El Castell de Guadalest",
+        "by": "Alicante (Baklandet)",
+        "land": "Spania",
+        "country_code": "ES",
+        "type": "Natur & Aktivitet",
+        "latitude": 38.6772,
+        "longitude": -0.1981,
+        "beskrivelse": "En dramatisk festningslandsby tilgjengelig via en uthugget tunnel i fjellet, med utsikt over en smaragdgrønn innsjø.",
+        "tips": "Perfekt dagsutflukt fra Costa Blanca. Kom tidlig.",
+        "beste_tid": "September til mai.",
+        "pris": "€",
+    },
+    {
+        "id": "es_gem_03",
+        "navn": "Las Colinas Oasis",
+        "by": "Orihuela Costa",
+        "land": "Spania",
+        "country_code": "ES",
+        "type": "Golf",
+        "latitude": 37.9314,
+        "longitude": -0.7915,
+        "beskrivelse": "En prisbelønnet mesterskapsbane som ligger skjult i en dyp dal omgitt av sitronlunder unna kystens mas.",
+        "tips": "Klubbhuset og restauranten er verdt et besøk selv om du ikke spiller.",
+        "beste_tid": "Oktober til mai.",
+        "pris": "€€",
+    },
+    {
+        "id": "es_gem_04",
+        "navn": "Altea gamleby",
+        "by": "Altea",
+        "land": "Spania",
+        "country_code": "ES",
+        "type": "Kultur & Historie",
+        "latitude": 38.5992,
+        "longitude": -0.0519,
+        "beskrivelse": "Hvitkalkede gater, blå kuppeltak og kunstneratelierer på en ås over Costa Blanca – roligere enn Benidorm, men like lett tilgjengelig for nordmenn.",
+        "tips": "Gå opp til Iglesia de Nuestra Señora del Consuelo ved solnedgang.",
+        "beste_tid": "April til juni og september til november.",
+        "pris": "€",
+    },
+    {
+        "id": "es_rest_01",
+        "navn": "Venta El Túnel",
+        "by": "Málaga",
+        "land": "Spania",
+        "country_code": "ES",
+        "type": "Mat & Vin",
+        "latitude": 36.7812,
+        "longitude": -4.4214,
+        "beskrivelse": "Legendarisk venta i Montes de Málaga siden 1953 – kjent for caldoso-arroz, migas og serrano-retter i skogrike omgivelser, langt fra kystens køer.",
+        "tips": "Bestill på forhånd i helgene og prøv arroz con pollo caldoso.",
+        "beste_tid": "Hele året.",
+        "pris": "€€",
+    },
+]
+
 LOKALE_SPISESTEDER = [
     {"navn": "Feskekôrka", "land": "Sverige", "by": "Göteborg", "type": "sjømat", "beskrivelse": "Torghall for fisk.", "pris": "100-200 SEK", "latitude": 57.7014, "longitude": 11.9578},
     {"navn": "Pelikan", "land": "Sverige", "by": "Stockholm", "type": "husmannskost", "beskrivelse": "Husmannskost siden 1664.", "pris": "150-250 SEK", "latitude": 59.3108, "longitude": 18.0792},
