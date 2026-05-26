@@ -3,7 +3,7 @@ import requests
 import os
 import random
 import json
-from datetime import datetime, time
+from datetime import datetime
 import pandas as pd
 import folium
 from streamlit_folium import st_folium
@@ -29,8 +29,6 @@ from affiliate_links import (
 from transport_planner import (
     bygg_eksterne_planleggere,
     bygg_stedvalg_fra_database,
-    hent_navitia_dekning,
-    planlegg_kollektivreise,
 )
 
 
@@ -1584,46 +1582,12 @@ with fane5:
     st.header(T["transport_header"])
     st.caption(T["transport_sub"])
 
-    try:
-        navitia_key = st.secrets.get("NAVITIA_API_KEY", "")
-    except Exception:
-        navitia_key = os.environ.get("NAVITIA_API_KEY", "")
-
-    if navitia_key:
-        regioner = hent_navitia_dekning(navitia_key)
-        if regioner:
-            st.caption(T["transport_navitia_dekning"].format(len(regioner)))
-    else:
-        st.info(T["transport_navitia_mangler"])
-
-    alle_transport = SKJULTE_PERLER_DB + LOKALE_SPISESTEDER_DB
-    stedvalg = bygg_stedvalg_fra_database(alle_transport)
+    stedvalg = bygg_stedvalg_fra_database(SKJULTE_PERLER_DB + LOKALE_SPISESTEDER_DB)
     alle_labels = sorted(stedvalg.keys())
 
     if not alle_labels:
-        st.warning("Ingen steder med koordinater i databasen ennå.")
+        st.caption("Ingen steder med koordinater i databasen ennå.")
     else:
-        itinerary_transport = get_itinerary_items()
-        if len(itinerary_transport) >= 2:
-            st.markdown(f"**{T['transport_reiseplan_hopp']}**")
-            hopp_kolonner = st.columns(min(len(itinerary_transport) - 1, 4))
-            for idx in range(min(len(itinerary_transport) - 1, 4)):
-                a = itinerary_transport[idx]
-                b = itinerary_transport[idx + 1]
-                with hopp_kolonner[idx]:
-                    if st.button(
-                        f"{a['navn'][:18]}… → {b['navn'][:18]}…",
-                        key=f"tp_hopp_{idx}",
-                        use_container_width=True,
-                    ):
-                        st.session_state.tp_fra_label = f"{a['navn']} — {a['by']}, {a['land']}"
-                        st.session_state.tp_til_label = f"{b['navn']} — {b['by']}, {b['land']}"
-                        st.rerun()
-        else:
-            st.caption(T["transport_ingen_reiseplan"])
-
-        st.divider()
-
         c_fra, c_til = st.columns(2)
         with c_fra:
             filter_fra = st.text_input(T["transport_sok_fra"], key="tp_filter_fra")
@@ -1654,92 +1618,13 @@ with fane5:
                 key="tp_til_select",
             )
 
-        c_dato, c_tid = st.columns(2)
-        with c_dato:
-            avreise_dato = st.date_input(
-                T["transport_dato"],
-                value=datetime.now().date(),
-                key="tp_dato",
-            )
-        with c_tid:
-            avreise_kl = st.time_input(T["transport_tid"], value=time(9, 0), key="tp_tid")
-
         fra_sted = stedvalg.get(fra_label)
         til_sted = stedvalg.get(til_label)
 
-        if st.button(
-            T["transport_sok"],
-            type="primary",
-            use_container_width=True,
-            key="transport_sok_btn",
-        ):
-            if not fra_sted or not til_sted:
-                st.warning(T["transport_velg_begge"])
-            elif fra_sted.get("id") == til_sted.get("id"):
-                st.warning(T["transport_samme_sted"])
-            else:
-                avreise_dt = datetime.combine(avreise_dato, avreise_kl)
-                reiser, feil = planlegg_kollektivreise(
-                    float(fra_sted["latitude"]),
-                    float(fra_sted["longitude"]),
-                    float(til_sted["latitude"]),
-                    float(til_sted["longitude"]),
-                    navitia_key,
-                    departure_dt=avreise_dt,
-                )
-                if feil:
-                    st.warning(feil)
-                elif reiser:
-                    st.session_state.tp_siste_reiser = reiser
-                    st.session_state.tp_siste_rute = (fra_sted, til_sted)
-
-        if st.session_state.get("tp_siste_reiser"):
-            fra_vis, til_vis = st.session_state.get("tp_siste_rute", (fra_sted, til_sted))
-            st.subheader(T["transport_resultat"])
-            st.caption(f"{fra_vis.get('navn')} → {til_vis.get('navn')}")
-
-            for idx, reise in enumerate(st.session_state.tp_siste_reiser):
-                with st.expander(
-                    f"🕐 {reise['avgang']} → {reise['ankomst']} · {reise['varighet_tekst']} · "
-                    f"{reise['antall_bytter']} {T['transport_bytter']}",
-                    expanded=(idx == 0),
-                ):
-                    for etapp in reise["etapper"]:
-                        detalj = f"**{etapp['ikon']} {etapp['linje']}**"
-                        if etapp["navn"]:
-                            detalj += f" — {etapp['navn']}"
-                        if etapp["fra"] and etapp["til"]:
-                            detalj += f"  \n{etapp['fra']} → {etapp['til']}"
-                        if etapp["avgang"]:
-                            detalj += f"  \n🕐 {etapp['avgang']}"
-                        st.markdown(detalj)
-
-                    if reise.get("kart_punkter") and idx == 0:
-                        st.markdown(f"**{T['transport_kart']}**")
-                        punkter = reise["kart_punkter"]
-                        m = folium.Map(location=punkter[0], zoom_start=7)
-                        folium.PolyLine(punkter, color="#1A73E8", weight=4, opacity=0.8).add_to(m)
-                        folium.Marker(
-                            punkter[0],
-                            tooltip=fra_vis.get("navn", "Fra"),
-                            icon=folium.Icon(color="green"),
-                        ).add_to(m)
-                        folium.Marker(
-                            punkter[-1],
-                            tooltip=til_vis.get("navn", "Til"),
-                            icon=folium.Icon(color="red"),
-                        ).add_to(m)
-                        st_folium(
-                            m,
-                            width=900,
-                            height=380,
-                            returned_objects=[],
-                            key=f"transport_rute_kart_{idx}",
-                        )
-
-        st.divider()
-        st.subheader(T["transport_eksterne"])
-        if fra_sted and til_sted:
+        if fra_sted and til_sted and fra_sted.get("id") != til_sted.get("id"):
+            st.markdown(
+                f"### 🗺️ Vis rute: **{fra_sted['by']}** til **{til_sted['by']}**"
+            )
             eksterne = bygg_eksterne_planleggere(
                 fra_sted["by"],
                 fra_sted["land"],
@@ -1747,40 +1632,44 @@ with fane5:
                 til_sted["land"],
                 spraak,
             )
-            e1, e2 = st.columns(2)
-            with e1:
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
                 st.link_button(
                     T["transport_lenke_google"],
                     eksterne["google"],
                     use_container_width=True,
                     key="tp_link_google",
                 )
+            with c2:
                 st.link_button(
                     T["transport_lenke_omio"],
                     eksterne["omio"],
                     use_container_width=True,
                     key="tp_link_omio",
                 )
-            with e2:
+            with c3:
                 st.link_button(
                     T["transport_lenke_rome2rio"],
                     eksterne["rome2rio"],
                     use_container_width=True,
                     key="tp_link_rome2rio",
                 )
+            with c4:
                 st.link_button(
                     T["transport_lenke_trainline"],
                     eksterne["trainline"],
                     use_container_width=True,
                     key="tp_link_trainline",
                 )
-                if "cp_atlas" in eksterne:
-                    st.link_button(
-                        T["transport_lenke_cp"],
-                        eksterne["cp_atlas"],
-                        use_container_width=True,
-                        key="tp_link_cp",
-                    )
+            if "cp_atlas" in eksterne:
+                st.link_button(
+                    T["transport_lenke_cp"],
+                    eksterne["cp_atlas"],
+                    use_container_width=True,
+                    key="tp_link_cp",
+                )
+        elif fra_sted and til_sted:
+            st.caption(T["transport_samme_sted"])
 
 
 

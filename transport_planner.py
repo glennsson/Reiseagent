@@ -28,6 +28,44 @@ def hent_navitia_dekning(api_key):
         return []
 
 
+def _finn_dekning_for_punkt(api_key, lat, lon):
+    """Finner Navitia coverage-region nærmest et koordinatpunkt."""
+    try:
+        r = requests.get(
+            f"{NAVITIA_BASE}/coord/{lon};{lat}/coverage",
+            headers=_navitia_headers(api_key),
+            params={"distance": 50000},
+            timeout=10,
+        )
+        if r.ok:
+            for reg in r.json().get("regions", []):
+                region_id = reg.get("id")
+                if region_id:
+                    return region_id
+    except Exception:
+        pass
+    return None
+
+
+def _hent_journeys_for_dekning(api_key, coverage_id, params):
+    """Kaller Navitia journeys for en spesifikk coverage-region."""
+    r = requests.get(
+        f"{NAVITIA_BASE}/coverage/{coverage_id}/journeys",
+        headers=_navitia_headers(api_key),
+        params=params,
+        timeout=25,
+    )
+    if r.status_code == 401:
+        return None, "Ugyldig Navitia API-nøkkel."
+    if r.status_code in {404, 400}:
+        return None, None
+    r.raise_for_status()
+    journeys = r.json().get("journeys", [])
+    if not journeys:
+        return None, None
+    return [_parse_journey(j) for j in journeys], None
+
+
 def planlegg_kollektivreise(
     from_lat,
     from_lon,
@@ -57,23 +95,28 @@ def planlegg_kollektivreise(
         "min_nb_transfers": 0,
     }
 
+    dekning_fra = _finn_dekning_for_punkt(api_key, from_lat, from_lon)
+    dekning_til = _finn_dekning_for_punkt(api_key, to_lat, to_lon)
+    dekning_kandidater = []
+    for dekning in (dekning_fra, dekning_til):
+        if dekning and dekning not in dekning_kandidater:
+            dekning_kandidater.append(dekning)
+
+    if not dekning_kandidater:
+        dekning_kandidater = hent_navitia_dekning(api_key)[:8]
+
+    siste_feil = None
     try:
-        r = requests.get(
-            f"{NAVITIA_BASE}/journeys",
-            headers=_navitia_headers(api_key),
-            params=params,
-            timeout=25,
-        )
-        if r.status_code == 401:
-            return [], "Ugyldig Navitia API-nøkkel."
-        if r.status_code == 404:
-            return [], "Ingen kollektivdata for denne ruten (prøv eksterne planleggere nedenfor)."
-        r.raise_for_status()
-        data = r.json()
-        journeys = data.get("journeys", [])
-        if not journeys:
-            return [], "Ingen kollektivforbindelser funnet for valgt tidspunkt."
-        return [_parse_journey(j) for j in journeys], None
+        for coverage_id in dekning_kandidater:
+            reiser, feil = _hent_journeys_for_dekning(api_key, coverage_id, params)
+            if feil and feil != siste_feil:
+                siste_feil = feil
+            if reiser:
+                return reiser, None
+
+        if siste_feil:
+            return [], siste_feil
+        return [], "Ingen kollektivforbindelser funnet for valgt tidspunkt."
     except requests.Timeout:
         return [], "Navitia tok for lang tid — prøv igjen eller bruk eksterne lenker."
     except Exception as e:
@@ -97,6 +140,9 @@ def _parse_journey(journey):
         if coords:
             kart_punkter.extend(coords)
 
+    if not kart_punkter:
+        kart_punkter = _journey_endepunkter(journey)
+
     return {
         "varighet_tekst": f"{timer}t {minutter:02d}m" if timer else f"{minutter} min",
         "varighet_sek": varighet_s,
@@ -106,6 +152,18 @@ def _parse_journey(journey):
         "etapper": etapper,
         "kart_punkter": kart_punkter,
     }
+
+
+def _journey_endepunkter(journey):
+    """Fallback-linje på kart når Navitia ikke returnerer geojson."""
+    punkter = []
+    for key in ("from", "to"):
+        sted = journey.get(key, {}).get("coord", {})
+        lat = sted.get("lat")
+        lon = sted.get("lon")
+        if lat is not None and lon is not None:
+            punkter.append([lat, lon])
+    return punkter
 
 
 def _format_navitia_tid(tid_str):
