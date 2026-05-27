@@ -1932,19 +1932,36 @@ with fane0:
                 else:
                     st.caption(tr("radar_gps_hint"))
             with rad_c2:
-                maks_avstand = st.slider(
-                    T["radar_radius"],
-                    min_value=10,
-                    max_value=500,
-                    value=150,
-                    step=10,
-                    key="radar_radius_slider",
-                )
                 vis_alle_perler = st.checkbox(
                     tr("radar_vis_alle"),
                     value=False,
                     key="radar_vis_alle_perler",
                 )
+                if vis_alle_perler:
+                    st.markdown(
+                        f'<p style="margin:0 0 0.35rem 0;color:#9CA3AF;text-decoration:line-through;'
+                        f'font-size:0.9rem;">{T["radar_radius"]}</p>',
+                        unsafe_allow_html=True,
+                    )
+                    maks_avstand = st.slider(
+                        " ",
+                        min_value=10,
+                        max_value=500,
+                        value=150,
+                        step=10,
+                        key="radar_radius_slider",
+                        disabled=True,
+                        label_visibility="collapsed",
+                    )
+                else:
+                    maks_avstand = st.slider(
+                        T["radar_radius"],
+                        min_value=10,
+                        max_value=500,
+                        value=150,
+                        step=10,
+                        key="radar_radius_slider",
+                    )
 
         if soke_metode == T["radar_gps"]:
             with st.spinner(T["radar_spinner"]):
@@ -1984,14 +2001,19 @@ with fane0:
         treff_steder = [t["data"] for t in radar_treff]
 
         if treff_steder:
-            st.markdown(
-                tr("radar_treff_tittel").format(
-                    T["radar_fant"],
-                    len(radar_treff),
-                    T["radar_destinasjoner"],
-                    soke_sentrum_navn or tr("radar_region_default"),
-                )
+            kart_sted = soke_sentrum_navn or tr("radar_region_default")
+            kart_tittel = (
+                tr("radar_kart_tittel_alle")
+                if vis_alle_perler
+                else tr("radar_kart_tittel")
             )
+            st.markdown(kart_tittel.format(len(radar_treff), kart_sted))
+            if vis_alle_perler:
+                st.markdown(
+                    f'<p style="color:#9CA3AF;text-decoration:line-through;font-size:0.85rem;'
+                    f'margin:0 0 0.5rem 0;">{tr("radar_avstand_deaktivert").format(maks_avstand)}</p>',
+                    unsafe_allow_html=True,
+                )
             kart_zoom = 7 if soke_sentrum else 5
             perler_kart = lag_radar_kart(
                 radar_treff,
