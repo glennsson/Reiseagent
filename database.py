@@ -31,7 +31,6 @@ SKJULTE_PERLER = [
     {"navn": "Bamberg", "land": "Tyskland", "by": "Bamberg", "type": "gastronomi", "beskrivelse": "UNESCO-by med røykøl.", "tips": "Rauchbier på Schlenkerla.", "beste_tid": "hele året", "latitude": 49.8917, "longitude": 10.8917},
     {"navn": "Wünsdorf bunkerstadt", "land": "Tyskland", "by": "Wünsdorf", "type": "urbanexploring", "beskrivelse": "Forlatt sovjetisk militærby.", "tips": "Ta med kamera.", "beste_tid": "april-oktober", "latitude": 52.1931, "longitude": 13.4683},
     # ========== ØSTERRIKE ==========
-    {"navn": "Café Central", "land": "Østerrike", "by": "Wien", "type": "kafé", "beskrivelse": "Trotskij, Freud og Lenin.", "tips": "Wiener Melange.", "beste_tid": "hele året", "latitude": 48.2103, "longitude": 16.3654},
     {"navn": "Hallstatt i regn", "land": "Østerrike", "by": "Hallstatt", "type": "kultur", "beskrivelse": "Magisk når turistene drar.", "tips": "Overnatt.", "beste_tid": "oktober-april", "latitude": 47.5622, "longitude": 13.6492},
     # ========== SLOVAKIA ==========
     {"navn": "Spišské Podhradie", "land": "Slovakia", "by": "Spišské Podhradie", "type": "kultur", "beskrivelse": "By under Europas største borg.", "tips": "Soloppgang på borgen.", "beste_tid": "mai-september", "latitude": 48.9994, "longitude": 20.7519},
@@ -48,7 +47,6 @@ SKJULTE_PERLER = [
     {"navn": "Český Krumlov i november", "land": "Tsjekkia", "by": "Český Krumlov", "type": "kultur", "beskrivelse": "Eventyrby i tåke.", "tips": "Bo på gammelt vertshus.", "beste_tid": "november", "latitude": 48.8128, "longitude": 14.3145},
     {"navn": "Kutná Hora", "land": "Tsjekkia", "by": "Kutná Hora", "type": "historie", "beskrivelse": "Benkirke med 40 000 skjeletter.", "tips": "Les historien.", "beste_tid": "hele året", "latitude": 49.9519, "longitude": 15.2678},
     # ========== UNGARN ==========
-    {"navn": "New York Café", "land": "Ungarn", "by": "Budapest", "type": "kafé", "beskrivelse": "Verdens vakreste kafé.", "tips": "Bare en kaffe.", "beste_tid": "hele året", "latitude": 47.5025, "longitude": 19.0733},
     {"navn": "Pécs", "land": "Ungarn", "by": "Pécs", "type": "kultur", "beskrivelse": "Middelhavsstemning.", "tips": "Zsolnay-museet.", "beste_tid": "april-oktober", "latitude": 46.0728, "longitude": 18.2322},
     {"navn": "Egersalók", "land": "Ungarn", "by": "Egersalók", "type": "natur", "beskrivelse": "Pamukkale uten folk.", "tips": "Bad ved solnedgang.", "beste_tid": "hele året", "latitude": 47.8547, "longitude": 20.3325},
     # ========== POLEN ==========
@@ -60,8 +58,6 @@ SKJULTE_PERLER = [
     {"navn": "Kuldīga", "land": "Latvia", "by": "Kuldīga", "type": "natur", "beskrivelse": "Europas bredeste vannfall.", "tips": "Gå på elvebunnen.", "beste_tid": "mai-september", "latitude": 56.9678, "longitude": 21.9722},
     # ========== PORTUGAL ==========
     {"navn": "Monsaraz", "land": "Portugal", "by": "Monsaraz", "type": "kultur", "beskrivelse": "Hvitkalket landsby.", "tips": "Stjernekikking.", "beste_tid": "april-oktober", "latitude": 38.4436, "longitude": -7.3811},
-    {"navn": "Café Majestic", "land": "Portugal", "by": "Porto", "type": "kafé", "beskrivelse": "Belle Époque fra 1921.", "tips": "Galão og pastel de nata.", "beste_tid": "hele året", "latitude": 41.1472, "longitude": -8.6067},
-    {"navn": "Café A Brasileira", "land": "Portugal", "by": "Lisboa", "type": "kafé", "beskrivelse": "Pessoas stamkafé.", "tips": "Bica.", "beste_tid": "hele året", "latitude": 38.7106, "longitude": -9.1419},
     # ========== SPANIA ==========
     {"navn": "Castellfollit de la Roca", "land": "Spania", "by": "Castellfollit", "type": "natur", "beskrivelse": "By på 50 m basaltklippe.", "tips": "Foto nedenfra.", "beste_tid": "mars-november", "latitude": 42.2192, "longitude": 2.5539},
     {"navn": "Las Médulas", "land": "Spania", "by": "Las Médulas", "type": "natur", "beskrivelse": "Mars-lignende landskap.", "tips": "Gå i tunnelene.", "beste_tid": "april-oktober", "latitude": 42.4606, "longitude": -6.7686},
