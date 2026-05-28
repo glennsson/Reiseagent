@@ -4,6 +4,7 @@ import os
 import time
 import json
 import re
+from pathlib import Path
 import folium
 from streamlit_folium import st_folium
 from dotenv import load_dotenv
@@ -168,6 +169,19 @@ if "_profil_lagret_snapshot" not in st.session_state:
 # ========================================
 st.set_page_config(page_title="Hemmelige Europa", layout="wide", initial_sidebar_state="expanded")
 
+
+def _inject_styles():
+    """Leser style.css og injiserer CSS i appen."""
+    css_path = Path(__file__).with_name("style.css")
+    if not css_path.exists():
+        return
+    css = css_path.read_text(encoding="utf-8")
+    if css.strip():
+        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
+
+_inject_styles()
+
 # ========================================
 # SPRÅKSYSTEM (sidebar-selektor + ordbok)
 # ========================================
@@ -322,181 +336,6 @@ with st.sidebar.expander(tr("affiliate_tjenester", "🧳 Våre Reisepartnere"), 
         )
 
 
-
-# --- PROFF STYLING (CSS-INJEKSJON) ---
-st.markdown(
-    """
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-        :root {
-            --gemini-bg: #F8FAFD;
-            --gemini-surface: #FFFFFF;
-            --gemini-surface-2: #F0F4F9;
-            --gemini-text: #1F1F1F;
-            --gemini-muted: #5F6368;
-            --gemini-border: #DADCE0;
-            --gemini-blue: #1A73E8;
-            --gemini-purple: #A142F4;
-            --gemini-radius: 18px;
-            --gemini-shadow: 0 12px 34px rgba(60, 64, 67, 0.12);
-        }
-
-        html, body, [class*="css"], .stMarkdown, [data-testid="stAppViewContainer"] {
-            font-family: 'Inter', sans-serif !important;
-        }
-
-        .stApp {
-            background:
-                radial-gradient(circle at top left, rgba(26, 115, 232, 0.16), transparent 28rem),
-                radial-gradient(circle at top right, rgba(161, 66, 244, 0.14), transparent 30rem),
-                var(--gemini-bg);
-            color: var(--gemini-text);
-        }
-
-        section.main > div {
-            max-width: 1180px;
-            padding-top: 1.25rem;
-        }
-
-        h1 {
-            font-weight: 700 !important;
-            color: var(--gemini-text) !important;
-            letter-spacing: -0.04em !important;
-            line-height: 1.04 !important;
-        }
-
-        h2, h3, .stMarkdown, p, span, label {
-            color: var(--gemini-text) !important;
-        }
-
-        [data-testid="stSidebar"] {
-            background: color-mix(in srgb, var(--gemini-surface) 88%, transparent) !important;
-            border-right: 1px solid var(--gemini-border);
-        }
-
-        [data-testid="stMetric"], .travel-card, [data-testid="stExpander"] {
-            background: color-mix(in srgb, var(--gemini-surface) 94%, transparent) !important;
-            border: 1px solid var(--gemini-border) !important;
-            border-radius: var(--gemini-radius) !important;
-            box-shadow: var(--gemini-shadow);
-        }
-
-        [data-testid="stMetric"] {
-            padding: 1rem;
-        }
-
-        .streamlit-expanderHeader {
-            background-color: var(--gemini-surface-2) !important;
-            color: var(--gemini-text) !important;
-            border-radius: var(--gemini-radius) !important;
-        }
-
-        .travel-card {
-            min-height: 205px;
-            padding: 1.05rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .travel-card h3 {
-            margin-top: 0;
-            font-size: 1.05rem;
-        }
-
-        [data-testid="stImage"] img {
-            border-radius: 14px;
-            object-fit: cover;
-            max-height: 220px;
-            width: 100%;
-            box-shadow: 0 6px 18px rgba(60, 64, 67, 0.15);
-        }
-
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 0.35rem;
-            overflow-x: auto;
-        }
-
-        .stTabs [data-baseweb="tab"] {
-            background: var(--gemini-surface-2);
-            border-radius: 999px;
-            padding: 0.45rem 1rem;
-        }
-
-        .stTabs [aria-selected="true"] {
-            background: linear-gradient(135deg, rgba(26,115,232,0.16), rgba(161,66,244,0.16));
-            color: var(--gemini-blue) !important;
-        }
-
-        [data-testid="stTabs"] [data-baseweb="tab-panel"] {
-            padding-top: 0.85rem;
-        }
-
-        [data-testid="stTabs"] [data-baseweb="tab-panel"] [data-testid="stVerticalBlock"] {
-            gap: 0.75rem;
-        }
-
-        [data-testid="stHtml"] iframe {
-            min-height: 430px;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --gemini-bg: #0B0F19;
-                --gemini-surface: #131722;
-                --gemini-surface-2: #1E2430;
-                --gemini-text: #E8EAED;
-                --gemini-muted: #BDC1C6;
-                --gemini-border: #2D3544;
-                --gemini-shadow: 0 16px 36px rgba(0, 0, 0, 0.32);
-            }
-
-            h1, h2, h3, .stMarkdown, p, span, label {
-                color: var(--gemini-text) !important;
-            }
-        }
-
-        .stLinkButton > a {
-            background: linear-gradient(135deg, var(--gemini-blue), var(--gemini-purple)) !important;
-            color: #FFFFFF !important;
-            border-radius: 999px !important;
-            border: none !important;
-            padding: 0.65rem 1.25rem !important;
-            font-weight: 650 !important;
-            text-decoration: none !important;
-            box-shadow: 0 8px 24px rgba(26, 115, 232, 0.25);
-        }
-
-        .stLinkButton > a:hover {
-            filter: brightness(1.08);
-            transform: translateY(-1px);
-        }
-
-        button[kind="primary"] {
-            border-radius: 999px !important;
-            background: linear-gradient(135deg, var(--gemini-blue), var(--gemini-purple)) !important;
-        }
-
-        @media (max-width: 768px) {
-            section.main > div {
-                padding-left: 0.85rem;
-                padding-right: 0.85rem;
-            }
-
-            h1 {
-                font-size: 2rem !important;
-            }
-
-            .travel-card {
-                min-height: auto;
-            }
-        }
-
-        header {background: rgba(0,0,0,0) !important;}
-        footer {visibility: hidden;}
-    </style>
-""",
-    unsafe_allow_html=True,
-)
 
 API_KEY = os.environ.get("OPENROUTER_API_KEY", "") or st.secrets.get("OPENROUTER_API_KEY", "")
 MODEL = st.session_state.get("openrouter_model", _standard_modell_id)
@@ -1720,6 +1559,36 @@ def sorter_steder_etter_profil(steder, hovedinteresse=None):
     return sorted(steder, key=lambda s: _profil_sorteringsnøkkel(s, hovedinteresse))
 
 
+def bygg_radar_ki_innsikt(valgt_land, radar_treff, hovedinteresse):
+    """Lager dynamisk KI-innsikt for radar ved landvalg."""
+    if not valgt_land:
+        return ""
+    antall = len(radar_treff or [])
+    if antall == 0:
+        if _spraak == "EN":
+            return (
+                f"You selected {valgt_land} - we currently do not have matching gems "
+                f"for your profile ({hovedinteresse}) in this area."
+            )
+        return (
+            f"Du har valgt {valgt_land} - vi har foreløpig ingen treff som matcher "
+            f"profilen din ({hovedinteresse}) i dette området."
+        )
+
+    naermeste = min(radar_treff, key=lambda t: t.get("avstand", 999999))
+    by_navn = naermeste.get("data", {}).get("by") or valgt_land
+
+    if _spraak == "EN":
+        return (
+            f"You selected {valgt_land} - we found {antall} gems near {by_navn} "
+            f"matching your profile for {hovedinteresse}."
+        )
+    return (
+        f"Du har valgt {valgt_land} - vi har funnet {antall} perler i nærheten av "
+        f"{by_navn} som passer profilen din for {hovedinteresse}."
+    )
+
+
 def sted_tittel_med_profil(sted, standard_emoji):
     """Tittel med 🌟 når stedet matcher aktiv hovedinteresse."""
     navn = sted.get("navn", "")
@@ -2011,6 +1880,15 @@ with fane0:
                     sted_sok=sted_sok,
                     valgt_land=valgt_land,
                     gps_sentrum_navn=T["radar_sentrum_gps"],
+                )
+            )
+
+        if soke_metode == T["radar_land_sok"] and valgt_land:
+            st.success(
+                bygg_radar_ki_innsikt(
+                    valgt_land,
+                    radar_treff,
+                    _aktiv_hovedinteresse(),
                 )
             )
 

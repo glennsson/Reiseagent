@@ -1,0 +1,860 @@
+PERLEVURDERING UTEN AI (regelbasert)
+Generert: 2026-05-28T10:24:24
+Antall steder: 171
+
+Oppsummering: behold=22, vurder_sletting=149, ukjent=0
+--------------------------------------------------------------------------------
+001. Paldiski (Paldiski, Estland) [hidden_gem/eventyr]
+     Score: 10 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En tidligere topphemmelig, lukket sovjetisk militærby på en vakker halvøy. Her lå det største treningssenteret for kjernefysiske ubåter i hele Sovjetunionen, og vanlige folk fikk ikke engang reise inn hit uten spesialtillatelse før i 1994. I dag er det et fascinerende, rått og spøkelsesaktig sted med forlatte kaserner, spektakulære kalksteinsklipper og et vakkert, rødt fyrtårn.
+
+002. Bussana Vecchia (Sanremo, Italia) [hidden_gem/kunstnerkoloni]
+     Score: 8 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En jordskjelvødelagt ligurisk landsby som ble tatt tilbake av kunstnere på 1960-tallet, med ruiner, gallerier og frodige smug.
+
+003. Wilcze Gardło (Wilcze Gardło, Polen) [hidden_gem/kultur]
+     Score: 8 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Tysk ulvehule fra andre verdenskrig, skjult i skogene i Masuria.
+
+004. Las Colinas Oasis (Orihuela Costa, Spania) [hidden_gem/golf]
+     Score: 8 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En prisbelønnet mesterskapsbane som ligger skjult i en dyp dal omgitt av sitronlunder unna kystens mas.
+
+005. Regierungsbunker (Regierungsbunker, Tyskland) [hidden_gem/kultur]
+     Score: 8 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Hemmelig tysk regjeringsbunker fra den kalde krigen, bygget for å huse regjeringen i tilfelle atomkrig.
+
+006. Saint-Cirq-Lapopie (Saint-Cirq-Lapopie, Frankrike) [hidden_gem/kunstnerlandsby]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En dramatisk landsby høyt over Lot-elven, elsket av surrealister og full av steinhus, trapper og utsiktspunkter.
+
+007. Salins-les-Bains (Salins-les-Bains, Frankrike) [hidden_gem/industrihistorie]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En undervurdert kur- og saltby i Jura med underjordiske saltgallerier, termalbad og bratte kalksteinsfort rundt dalen.
+
+008. Trattoria da Enzo (Roma, Italia) [restaurant/italiensk]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Hemmelig.
+
+009. Santo Stefano di Sessanio (Santo Stefano di Sessanio, Italia) [hidden_gem/fjellandsby]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En nesten forlatt steinlandsby høyt i Abruzzo, langsomt restaurert til et atmosfærisk albergo diffuso omgitt av fjell og sauebeiter.
+
+010. Vitorchiano (Vitorchiano, Italia) [hidden_gem/middelalderby]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En kompakt steinby i Lazio bygget på vulkansk klippe, med smale passasjer, hengende hager og en uventet Moai-statue.
+
+011. Srebrna Góra festning (Srebrna Góra, Polen) [hidden_gem/festning]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En massiv prøyssisk fjellfestning i Nedre Schlesien, bygget som et militært monster over skogkledde åser.
+
+012. Tykocin (Tykocin, Polen) [hidden_gem/jødisk historie]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En liten Podlasie-by med barokk torg, bevart synagoge og tung, viktig historie i et landskap få turister prioriterer.
+
+013. El Castell de Guadalest (Alicante (Baklandet), Spania) [hidden_gem/natur]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En dramatisk festningslandsby tilgjengelig via en uthugget tunnel i fjellet, med utsikt over en smaragdgrønn innsjø.
+
+014. Frías (Frías, Spania) [hidden_gem/historie]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En av Spanias minste byer, balansert på en kalksteinsrygg med hengende hus, borg og en middelalderbro over Ebro.
+
+015. Mallos de Riglos (Riglos, Spania) [hidden_gem/natur]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En liten landsby presset inn under enorme røde konglomeratklipper, kjent blant klatrere men ofte oversett av vanlige reisende.
+
+016. Setenil de las Bodegas (Ronda/Cádiz, Spania) [hidden_gem/kultur]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En helt unik hvit landsby hvor husene er bygget direkte inn under massive overhengende klipper. Fjellet fungerer som naturlig beskyttelse mot solen.
+
+017. Maunsell Forts (Maunsell Forts, Storbritannia) [hidden_gem/kultur]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Forlatte flåtefort fra andre verdenskrig i Nordsjøen, bygget for å forsvare London mot tyske fly.
+
+018. The Forbidden Corner (The Forbidden Corner, Storbritannia) [hidden_gem/kultur]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En særegen labyrint av tunneler, hager og skjulte rom i Yorkshire Dales.
+
+019. Lilla Ego (Stockholm, Sverige) [restaurant/nordisk]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Hemmelig restaurant.
+
+020. Monschau (Monschau, Tyskland) [hidden_gem/bindingsverksby]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En trang dalby i Eifel med mørke bindingsverkshus, brosteinsgater og sennepsmølle, langt roligere enn de store romantiske rutene.
+
+021. Quedlinburg bakgatene (Quedlinburg, Tyskland) [hidden_gem/unesco]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: UNESCO-by med over tusen bindingsverkshus, men de beste opplevelsene ligger i de stille smugene vekk fra markedsplassen.
+
+022. Bastei ved soloppgang (Rathen, Tyskland) [hidden_gem/natur]
+     Score: 7 | Status: behold
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Sandsteinstårn og broer i Sächsische Schweiz, spektakulært kjent lokalt men fortsatt magisk hvis du kommer før turistbussene.
+
+023. CasAnus (Tarmhotellet i Kemzeke - Rostiga Roadtrips) (Kemzeke, Belgia) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Tarmhotell fra Rostiga Roadtrips.
+
+024. Buzludzha (Buzludzha, Bulgaria) [hidden_gem/urbanexploring]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Forlatt UFO.
+
+025. Christiania (København, Danmark) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Selvstyrende fristad.
+
+026. Bomarsunds festning (Åland, Finland) [hidden_gem/historie]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Russisk festningsruin.
+
+027. La Couvertoirade (La Couvertoirade, Frankrike) [hidden_gem/tempelridderlandsby]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En befestet landsby på Larzac-platået, knyttet til tempelriddere og hospitalriddere, med intakte murer og vindpisket steinlandskap.
+
+028. Moustiers-Sainte-Marie (Moustiers-Sainte-Marie, Frankrike) [hidden_gem/fjellandsby]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En provençalsk landsby under kalksteinsklipper, kjent for keramikk og en gullstjerne som henger i lenke mellom fjellveggene.
+
+029. Skellig Michael (Skellig, Irland) [hidden_gem/historie]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Øy-kloster 500-tallet.
+
+030. Calcata Vecchia (Calcata, Italia) [hidden_gem/kunstnerlandsby]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En dramatisk middelalderlandsby på en tuffklippe nord for Roma, reddet av kunstnere, håndverkere og bohemer etter at den nesten ble fraflyttet.
+
+031. Craco (Craco, Italia) [hidden_gem/spøkstad]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Forlatt middelalderby.
+
+032. Dozza (Dozza, Italia) [hidden_gem/gatekunst]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En liten befestet landsby i Emilia-Romagna der husveggene er dekket av store kunstverk og hele sentrum fungerer som et åpent galleri.
+
+033. Pitigliano (Pitigliano, Italia) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Ofte kalt 'Lille Jerusalem'. Dette er en spektakulær by i Toscana som er hugget direkte ut av en enorm klippe av vulkansk tuffstein. Husene ser ut som de vokser organisk opp fra fjellet. Byen er omringet av 'Vie Cave' – mystiske, dype og eldgamle veier som etruskerne hugget dypt ned i fjellet for over 2000 år siden.
+
+034. Reschensee (Reschensee, Italia) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fantastisk historisk sted kjent fra TV.
+
+035. Bolwoningen (Kulehusene i Den Bosch - Rostiga Roadtrips) ('s-Hertogenbosch, Nederland) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Kulehus fra Rostiga Roadtrips.
+
+036. Deventer (Deventer, Nederland) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Glem overfylte Amsterdam! Deventer er en av de aller eldste byene i Nederland, vakkert plassert langs elven IJssel. Byen har en perfekt bevart middelalderkjerne med trange, svingete smug, urgamle mursteinshus og en herlig, tilbakelent atmosfære fri for turisthorder.
+
+037. Pyramiden (Svalbard, Norge) [hidden_gem/spøkstad]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Forlatt sovjetisk gruveby.
+
+038. Urnes stavkirke (Urnes, Norge) [hidden_gem/historie]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Norges eldste stavkirke.
+
+039. Błędówørkenen (Klucze, Polen) [hidden_gem/ørkenlandskap]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Europas merkeligste innlandsørkenfølelse: sandflater og furuskog i Schlesien, en surreal kontrast til regionens industribyer.
+
+040. Książ slottets tunneler (Wałbrzych, Polen) [hidden_gem/mysterie]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Et eventyrslott over en ravine med et mørkere lag under bakken, knyttet til nazistenes uferdige Project Riese.
+
+041. Wieliczka Salt Mine (Wieliczka Salt Mine, Polen) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fantastisk historisk sted kjent fra TV.
+
+042. Zalipie (Zalipie, Polen) [hidden_gem/folkekunst]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En landsby der hus, brønner og fjøs er dekorert med håndmalte blomster, en levende folkekunsttradisjon langt fra storbyrutene.
+
+043. Maramureș (Maramureș, Romania) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Hestekjerrer og trekirker.
+
+044. Albarracín (Albarracín, Spania) [hidden_gem/middelalderby]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Rosa-rød fjellby i Aragón med skjeve hus, bymurer og labyrintiske smug som føles som en filmkulisse uten kystturismen.
+
+045. Altea gamleby (Altea, Spania) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Hvitkalkede gater, blå kuppeltak og kunstneratelierer på en ås over Costa Blanca – roligere enn Benidorm, men like lett tilgjengelig for nordmenn.
+
+046. Bardenas Reales (Arguedas, Spania) [hidden_gem/ørkenlandskap]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Et halvtørt månelandskap i Navarra med leirformasjoner, raviner og støvete veier som føles mer Arizona enn Nord-Spania.
+
+047. Venta El Túnel (Málaga, Spania) [restaurant/gastronomi]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Legendarisk venta i Montes de Málaga siden 1953 – kjent for caldoso-arroz, migas og serrano-retter i skogrike omgivelser, langt fra kystens køer.
+
+048. Ujué (Ujué, Spania) [hidden_gem/pilegrimsby]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En liten navarrisk åsby med festningskirke, steinhus og vid utsikt mot Pyreneene og vinmarkene.
+
+049. Bannerman's Castle (Bannerman's Castle, Storbritannia) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Forlatt våpenlager bygget som et skotsk slott på en øy i Hudson-elven.
+
+050. Dunmore Pineapple (Dunmore Pineapple, Storbritannia) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fantastisk historisk sted kjent fra TV.
+
+051. Imber (Imber, Storbritannia) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fantastisk historisk sted kjent fra TV.
+
+052. Kelvedon Hatch Secret Nuclear Bunker (Kelvedon Hatch Secret Nuclear Bunker, Storbritannia) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fantastisk historisk sted kjent fra TV.
+
+053. Orford Ness (Orford Ness, Storbritannia) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fantastisk historisk sted kjent fra TV.
+
+054. Pluckley (Pluckley, Storbritannia) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fantastisk historisk sted kjent fra TV.
+
+055. Scapa Flow (Scapa Flow, Storbritannia) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fantastisk historisk sted kjent fra TV.
+
+056. Stroma (Stroma, Storbritannia) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fantastisk historisk sted kjent fra TV.
+
+057. Tyneham (Tyneham, Storbritannia) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fantastisk historisk sted kjent fra TV.
+
+058. Ales stenar (Kåseberga, Sverige) [hidden_gem/historie]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Sveriges Stonehenge.
+
+059. Nämforsens hällristningar (Näsåker, Sverige) [hidden_gem/historie]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: 2600 helleristninger.
+
+060. Sala Silvergruva (Sala, Sverige) [hidden_gem/eventyr]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En av verdens best bevarte gruvemiljøer. I over 500 år var dette en av Sveriges viktigste sølvgruver. Det mest helsprø her er at de har bygget en hotellsuite – 'Gruvsviten' – hele 155 meter under bakken! Her sover du i et oppvarmet rom omringet av mørke, underjordiske sjakter og opplyste, mystiske gruvesjøer.
+
+061. Kutná Hora (Kutná Hora, Tsjekkia) [hidden_gem/historie]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Benkirke med 40 000 skjeletter.
+
+062. Beelitz-Heilstätten (Beelitz, Tyskland) [hidden_gem/urbanexploring]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Forlatt militærsykehus.
+
+063. Bergen (Germany) (Bergen (Germany), Tyskland) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En fantastisk destinasjon oppdaget via Wikivoyage.
+
+064. Heeresversuchsanstalt Peenemünde (Heeresversuchsanstalt Peenemünde, Tyskland) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fantastisk historisk sted kjent fra TV.
+
+065. Lüneburg (Lüneburg, Tyskland) [hidden_gem/hanseatisk kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En tidligere saltby med skjeve mursteinsfasader, smug og havnekanter som gir ekte nordtysk atmosfære uten Hamburg-tempoet.
+
+066. Prora (Prora, Tyskland) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fantastisk historisk sted kjent fra TV.
+
+067. Sankt Nikolai, Hamburg (Sankt Nikolai, Hamburg, Tyskland) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Ruinen av en nygotisk kirke, bombet under andre verdenskrig, nå et minnesmerke mot krig.
+
+068. Spreepark (Spreepark, Tyskland) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Forlatt fornøyelsespark i Berlin, stengt siden 2002, med rustne karuseller og overgrodd natur.
+
+069. Teufelsberg (Teufelsberg, Tyskland) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fantastisk historisk sted kjent fra TV.
+
+070. Völklinger Hütte (Völklingen, Tyskland) [hidden_gem/industriarv]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Et enormt nedlagt jernverk i Saarland, nå UNESCO-sted med gangbroer, rust, kunstutstillinger og nesten sci-fi-aktig industriarkitektur.
+
+071. Waldspirale (Waldspirale, Tyskland) [hidden_gem/kultur]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fantastisk historisk sted kjent fra TV.
+
+072. Wünsdorf bunkerstadt (Wünsdorf, Tyskland) [hidden_gem/urbanexploring]
+     Score: 6 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Forlatt sovjetisk militærby.
+
+073. Gjirokastër (Gjirokastër, Albania) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Steinby med herregårder.
+
+074. À la Mort Subite (Brussel, Belgia) [restaurant/kafé]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Historisk ølkafé.
+
+075. Durbuy (Durbuy, Belgia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Verdens minste by.
+
+076. Mostar etter 17 (Mostar, Bosnia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Ekte Mostar.
+
+077. Tima-Irma (Mostar, Bosnia) [restaurant/bosnisk]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Familierestaurant.
+
+078. Plovdivs gamleby (Plovdiv, Bulgaria) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Europas eldste by.
+
+079. Rila-klosteret (Rila, Bulgaria) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Stripete arkitektur.
+
+080. Schønnemann (København, Danmark) [restaurant/smørrebrød]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Smørrebrød siden 1877.
+
+081. Rubjerg Knude Fyr (Løkken, Danmark) [hidden_gem/natur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fyr begravd i sanddyner.
+
+082. Tartu (Tartu, Estland) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Ung universitetsby.
+
+083. Klippekirken (Helsinki, Finland) [hidden_gem/arkitektur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Kirke uthugget i berget.
+
+084. Conques (Conques-en-Rouergue, Frankrike) [hidden_gem/pilegrimsby]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En kompakt middelalderlandsby i Aveyron med romansk klosterkirke, brosteinsgater og gyllent kveldslys over skifertak.
+
+085. Les Machines de l'Île (Nantes, Frankrike) [hidden_gem/museum]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Mekaniske kjempedyr.
+
+086. Palais Idéal (Palais Idéal, Frankrike) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Et eventyrlig, naivistisk palass bygget for hånd av postbudet Ferdinand Cheval over 33 år.
+
+087. Chez Janou (Paris, Frankrike) [restaurant/fransk]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Sjokolademousse.
+
+088. Le Petit Zinc (Paris, Frankrike) [restaurant/fransk]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Art nouveau.
+
+089. Triumfbue-rundkjøringen (Rondellkaos - Rostiga Roadtrips) (Paris, Frankrike) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Rundkjøringen rundt Triumfbuen fra Rostiga Roadtrips.
+
+090. Rochefort-en-Terre (Rochefort-en-Terre, Frankrike) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Vakreste landsby.
+
+091. Kehoe's Pub (Dublin, Irland) [restaurant/pub]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Urørt siden 1800.
+
+092. La Favorita (Bologna, Italia) [restaurant/italiensk]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Uten meny.
+
+093. Civita di Bagnoregio (Civita, Italia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Døende by på klippe.
+
+094. Matera om natten (Matera, Italia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Europas eldste by.
+
+095. All'Arco (Roma, Italia) [restaurant/streetfood]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Cicchetti.
+
+096. Prizren (Prizren, Kosovo) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Osmansk perle.
+
+097. Kuldīga (Kuldīga, Latvia) [hidden_gem/natur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Europas bredeste vannfall.
+
+098. Korshøyden (Šiauliai, Litauen) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: 200 000 kors.
+
+099. Kotor i januar (Kotor, Montenegro) [hidden_gem/natur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Stille fjord.
+
+100. Groningen (Groningen, Nederland) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Sykkelby.
+
+101. Ohridsjøen (Ohrid, Nord-Makedonia) [hidden_gem/natur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Europas eldste innsjø.
+
+102. Kaffestuggu (Røros, Norge) [restaurant/kafé]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Rømmegrøt i historisk miljø.
+
+103. Røros (Røros, Norge) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: UNESCO gruveby frosset i tid.
+
+104. Doruchów (Heksebrenningsmonumentet - Rostiga Roadtrips) (Doruchów, Polen) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Heksebrenningsmonument fra Rostiga Roadtrips.
+
+105. Krzywy Las (Gryfino, Polen) [hidden_gem/natur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: 400 bøyde trær.
+
+106. Kaplica Czaszek (Kaplica Czaszek, Polen) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: En skjelettkirke dekorert med hodeskaller og bein fra over 3000 mennesker.
+
+107. Project Riese (Project Riese, Polen) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Et enormt, uferdig nazistisk tunnelkompleks i Uglefjellene, bygget av tvangsarbeidere.
+
+108. Wieliczka saltgruve (Wieliczka, Polen) [hidden_gem/eventyr]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Katedral i salt.
+
+109. Łódź (Sveriges Hollywood & Mystikk - Rostiga Roadtrips) (Łódź, Polen) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Polsk filmby fra Rostiga Roadtrips.
+
+110. Café A Brasileira (Lisboa, Portugal) [restaurant/kafé]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Pessoas kafé.
+
+111. Monsaraz (Monsaraz, Portugal) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Hvitkalket landsby.
+
+112. Café Majestic (Porto, Portugal) [restaurant/kafé]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Belle Époque.
+
+113. Caru' cu Bere (Bukarest, Romania) [restaurant/rumensk]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Ølhus fra 1879.
+
+114. Băile Tușnad (Băile Tușnad, Romania) [hidden_gem/natur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Vulkansk sjø.
+
+115. Casa Tomis (Constanța, Romania) [restaurant/sjømat]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fersk fisk.
+
+116. Constanța (Constanța, Romania) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Havneby ved Svartehavet.
+
+117. Crama Sibiul Vechi (Sibiu, Romania) [restaurant/rumensk]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Transylvansk kjeller.
+
+118. Sibiu (Sibiu, Romania) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Hus med øyne.
+
+119. Banská Bystrica (Banská Bystrica, Slovakia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Historisk gruveby.
+
+120. Café Veronský dom (Martin, Slovakia) [restaurant/kafé]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Middelalderkafé.
+
+121. Koliba U Deda (Martin, Slovakia) [restaurant/slovakisk]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fjellmat.
+
+122. Martin (Martin, Slovakia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Autentisk kulturhovedstad.
+
+123. Spišské Podhradie (Spišské Podhradie, Slovakia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: By under Europas største borg.
+
+124. Čičmany (Čičmany, Slovakia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Målte trehus.
+
+125. Castellfollit de la Roca (Castellfollit, Spania) [hidden_gem/natur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: By på 50 m basaltklippe.
+
+126. Las Médulas (Las Médulas, Spania) [hidden_gem/natur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Mars-lignende landskap.
+
+127. Bodega de la Ardosa (Madrid, Spania) [restaurant/tapas]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Tapasbar 1892.
+
+128. Setenil de las Bodegas (Setenil, Spania) [hidden_gem/arkitektur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Hus INN i klippene.
+
+129. El Rinconcillo (Sevilla, Spania) [restaurant/tapas]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Spanias eldste.
+
+130. Valencia (Det spanske nasjonalmålet - Rostiga Roadtrips) (Valencia, Spania) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Spansk nasjonalmål fra Rostiga Roadtrips.
+
+131. Iron Bridge (Verdens første jernbro - Rostiga Roadtrips) (Ironbridge, Storbritannia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Verdens første jernbro fra Rostiga Roadtrips.
+
+132. The George Inn (London, Storbritannia) [restaurant/pub]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Shakespeare drakk her.
+
+133. Isle of Man (Peel P50 Mikrobiler - Rostiga Roadtrips) (Peel, Storbritannia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Peel P50 mikrobiler fra Rostiga Roadtrips.
+
+134. Portmeirion (Portmeirion, Storbritannia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Italiensk drømmelandsby.
+
+135. Blowing Stone (Viking-fløytestenen - Rostiga Roadtrips) (Shrivenham, Storbritannia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Viking-fløytestenen fra Rostiga Roadtrips.
+
+136. Whitstable (Ostronhuvudstad & Skalldyr - Rostiga Roadtrips) (Whitstable, Storbritannia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Ostronhovedstad fra Rostiga Roadtrips.
+
+137. Lea & Perrins (Sausfabrikken i Worcester - Rostiga Roadtrips) (Worcester, Storbritannia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Worcestersausfabrikken fra Rostiga Roadtrips.
+
+138. Borgvattnets Prästgård (Borgvattnet, Sverige) [hidden_gem/overnaturlig]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Sveriges mest hemsökta hus.
+
+139. Skuleskogen (Docksta, Sverige) [hidden_gem/natur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Trollskog med 40 m dyp klyfta.
+
+140. Feskekôrka (Göteborg, Sverige) [restaurant/sjømat]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Torghall for fisk.
+
+141. Håveruds akvedukt (Håverud, Sverige) [hidden_gem/arkitektur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Bro der båter går over veien.
+
+142. Sarek nasjonalpark (Jokkmokk, Sverige) [hidden_gem/natur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Europas siste villmark.
+
+143. Bjuröklubb (Lövånger, Sverige) [hidden_gem/natur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Fyr med midnattssol.
+
+144. Gropens bilkyrkogård (Ryd, Sverige) [hidden_gem/urbanexploring]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Naturen tar tilbake 50-tallsbiler.
+
+145. Bakfickan (Stockholm, Sverige) [restaurant/husmannskost]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Operakjellerens bakside.
+
+146. Pelikan (Stockholm, Sverige) [restaurant/husmannskost]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Husmannskost siden 1664.
+
+147. Torsby Fordonsmuseum (Torsby, Sverige) [hidden_gem/museum]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Ankans eget bilmuseum.
+
+148. Bilkirkegården i Båstnäs (Rostiga Roadtrips) (Töcksfors, Sverige) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Bilkirkegård fra Rostiga Roadtrips.
+
+149. Hanácká Hospoda (Olomouc, Tsjekkia) [restaurant/tsjekkisk]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Stinkende ost.
+
+150. Olomouc (Olomouc, Tsjekkia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Vakkert som Praha – uten turister.
+
+151. Café Louvre (Praha, Tsjekkia) [restaurant/kafé]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Einstein og Kafka.
+
+152. Český Krumlov i november (Český Krumlov, Tsjekkia) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Eventyrby i tåke.
+
+153. Bamberg (Bamberg, Tyskland) [hidden_gem/gastronomi]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: UNESCO-by med røykøl.
+
+154. Schlenkerla (Bamberg, Tyskland) [restaurant/tysk]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Røykøl siden 1405.
+
+155. Konnopke's Imbiss (Berlin, Tyskland) [restaurant/streetfood]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Currywurst.
+
+156. Zur Letzten Instanz (Berlin, Tyskland) [restaurant/tysk]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Berlins eldste. 1621.
+
+157. Mumienkeller Bleicherode (Mumiehvelvet - Rostiga Roadtrips) (Bleicherode, Tyskland) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Mumiehvelv fra Rostiga Roadtrips.
+
+158. Görlitz (Görlitz, Tyskland) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Tysklands best bevarte by.
+
+159. Rakotzbrücke (Kromlau, Tyskland) [hidden_gem/arkitektur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Perfekt sirkelbro.
+
+160. Automuseum Melle (Levende veteranbiler - Rostiga Roadtrips) (Melle, Tyskland) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Levende veteranbilmuseum fra Rostiga Roadtrips.
+
+161. Nordstrandischmoor (Traktortog på havbunnen - Rostiga Roadtrips) (Nordstrand, Tyskland) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Traktortog over havbunnen fra Rostiga Roadtrips.
+
+162. Neckarmüller (Tübingen, Tyskland) [restaurant/tysk]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Bryggeri ved Neckar.
+
+163. Vogelsang Ordensburg (Vogelsang Ordensburg, Tyskland) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Tidligere nazistisk ordensborg i Eifel, senere brukt av britene og belgierne som militærbase.
+
+164. Worpswede (Ekspresjonistisk Kunstnerkoloni - Rostiga Roadtrips) (Worpswede, Tyskland) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Ekspresjonistisk kunstnerkoloni fra Rostiga Roadtrips.
+
+165. Bors GasztroBár (Budapest, Ungarn) [restaurant/streetfood]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Supper.
+
+166. New York Café (Budapest, Ungarn) [restaurant/kafé]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Verdens vakreste.
+
+167. Egersalók (Egersalók, Ungarn) [hidden_gem/natur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Pamukkale uten folk.
+
+168. Pécs (Pécs, Ungarn) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Middelhavsstemning.
+
+169. Hallstatt i regn (Hallstatt, Østerrike) [hidden_gem/kultur]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Magisk når turistene drar.
+
+170. Café Central (Wien, Østerrike) [restaurant/kafé]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Trotskij og Freud.
+
+171. Gmoakeller (Wien, Østerrike) [restaurant/østerriksk]
+     Score: 5 | Status: vurder sletting
+     Begrunnelse: Regelbasert score av beskrivelse/tips/type + datakvalitet.
+     Beskrivelse: Gammel vinkjeller.
