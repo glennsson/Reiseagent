@@ -879,13 +879,19 @@ def _parse_json_innhold(tekst):
     return None
 
 
-def sanke_perler_for_omrade(omrade, antall=8):
+def sanke_perler_for_omrade(omrade, antall=8, min_score=7, strict_mode=False):
     """Henter og kvalitetssikrer flere perlekandidater automatisk."""
     if not API_KEY:
         raise RuntimeError(tr("sank_mangler_api"))
 
     antall = max(3, min(20, int(antall)))
+    min_score = max(1, min(10, int(min_score)))
     if _spraak == "EN":
+        strict_hint = (
+            " Strict mode is ON: prioritize lesser-known places, avoid obvious landmarks, and write at least 12 words in each description."
+            if strict_mode
+            else ""
+        )
         system_prompt = (
             "You curate off-the-beaten-path places in Europe. "
             "Return strict JSON only with this shape: "
@@ -893,9 +899,15 @@ def sanke_perler_for_omrade(omrade, antall=8):
             '"saerhetsscore":8,"type":"kultur","source_type":"hidden_gem"}]}. '
             "Include exactly the requested number of candidates, avoid mainstream landmarks, "
             "and keep descriptions factual and concise."
+            f"{strict_hint}"
         )
         user_prompt = f"Area: {omrade}. Number of candidates: {antall}."
     else:
+        strict_hint = (
+            " Streng modus er PÅ: prioriter mindre kjente steder, unngå åpenbare landemerker, og skriv minst 12 ord i hver beskrivelse."
+            if strict_mode
+            else ""
+        )
         system_prompt = (
             "Du kuraterer skjulte perler i Europa. "
             "Returner kun gyldig JSON med format: "
@@ -903,6 +915,7 @@ def sanke_perler_for_omrade(omrade, antall=8):
             '"saerhetsscore":8,"type":"kultur","source_type":"hidden_gem"}]}. '
             "Gi nøyaktig antall kandidater, unngå mainstream landemerker, "
             "og hold beskrivelser korte og faktabaserte."
+            f"{strict_hint}"
         )
         user_prompt = f"Område: {omrade}. Antall kandidater: {antall}."
 
@@ -938,7 +951,13 @@ def sanke_perler_for_omrade(omrade, antall=8):
         kandidat = _normaliser_agent_perle(rå, json.dumps(rå, ensure_ascii=False))
         if not kandidat:
             continue
-        if kandidat.get("saerhetsscore", 0) < 7:
+        if strict_mode:
+            beskrivelse = (kandidat.get("beskrivelse") or "").strip()
+            if len(beskrivelse.split()) < 12:
+                forkastet_score += 1
+                continue
+
+        if kandidat.get("saerhetsscore", 0) < min_score:
             forkastet_score += 1
             continue
 
@@ -2211,6 +2230,18 @@ with fane2:
                 value=8,
                 key="sank_antall_input",
             )
+            sank_min_score = st.slider(
+                tr("sank_min_score"),
+                min_value=5,
+                max_value=10,
+                value=7,
+                key="sank_min_score_input",
+            )
+            sank_streng = st.checkbox(
+                tr("sank_strict_mode"),
+                value=False,
+                key="sank_strict_mode_input",
+            )
             start_sank = st.form_submit_button(
                 tr("sank_knapp"), type="primary", use_container_width=True
             )
@@ -2222,7 +2253,12 @@ with fane2:
             else:
                 try:
                     with st.spinner(tr("sank_spinner").format(omrade)):
-                        kandidater, rapport = sanke_perler_for_omrade(omrade, sank_antall)
+                        kandidater, rapport = sanke_perler_for_omrade(
+                            omrade,
+                            sank_antall,
+                            min_score=sank_min_score,
+                            strict_mode=sank_streng,
+                        )
                     st.session_state["sank_kandidater"] = kandidater
                     st.session_state["sank_rapport"] = rapport
                     st.session_state["sank_omrade"] = omrade
@@ -2243,6 +2279,32 @@ with fane2:
             )
 
         if sank_kandidater:
+            sortering = st.selectbox(
+                tr("sank_sorter"),
+                [
+                    tr("sank_sorter_score_desc"),
+                    tr("sank_sorter_score_asc"),
+                    tr("sank_sorter_navn"),
+                ],
+                key="sank_sortering",
+            )
+            if sortering == tr("sank_sorter_score_desc"):
+                visningsliste = sorted(
+                    sank_kandidater,
+                    key=lambda k: k.get("saerhetsscore", 0),
+                    reverse=True,
+                )
+            elif sortering == tr("sank_sorter_score_asc"):
+                visningsliste = sorted(
+                    sank_kandidater,
+                    key=lambda k: k.get("saerhetsscore", 0),
+                )
+            else:
+                visningsliste = sorted(
+                    sank_kandidater,
+                    key=lambda k: (k.get("navn") or "").lower(),
+                )
+
             if st.button(tr("sank_lagre_alle"), use_container_width=True, key="sank_save_all"):
                 lagret_antall = 0
                 for kandidat in sank_kandidater:
@@ -2253,7 +2315,7 @@ with fane2:
                 st.success(tr("sank_lagret_alle").format(lagret_antall))
                 st.rerun()
 
-            for idx, kandidat in enumerate(sank_kandidater):
+            for idx, kandidat in enumerate(visningsliste):
                 with st.container(border=True):
                     st.markdown(
                         f"**{kandidat['navn']}**  \n"
