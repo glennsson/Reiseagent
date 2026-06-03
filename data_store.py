@@ -185,6 +185,10 @@ def seed_places():
     places = [normalize_place(p, "hidden_gem") for p in skjulte_kilde]
     places += [normalize_place(p, "restaurant") for p in restaurant_kilde]
     with get_connection() as conn:
+        # Fjern utdaterte duplikater fra tidligere «Rostiga Roadtrips»-navn (ny ID ved rename).
+        conn.execute(
+            "DELETE FROM places WHERE id LIKE '%rostiga-roadtrips%'"
+        )
         for place in places:
             conn.execute(
                 """

@@ -4,6 +4,7 @@ import os
 import time
 import json
 import re
+import asyncio
 from pathlib import Path
 import folium
 from streamlit_folium import st_folium
@@ -15,21 +16,14 @@ import math
 from data_store import (
     add_itinerary_item,
     get_connection,
-    get_affiliate_stats,
     get_itinerary_items,
     get_places,
     init_db,
-    log_affiliate_click,
     normalize_place,
     remove_itinerary_item,
 )
 from translations import TEKSTER
 from place_images import hent_sted_bilde_url
-from affiliate_links import (
-    bygg_booking_url as _bygg_booking_url,
-    bygg_leiebil_url as _bygg_leiebil_url,
-    bygg_matlevering_url as _bygg_matlevering_url,
-)
 from transport_planner import (
     bygg_eksterne_planleggere,
     bygg_stedvalg_fra_database,
@@ -227,12 +221,18 @@ _standard_modell_id = _standard_modell()
 _modell_default_idx = _modell_ids.index(_standard_modell_id) if _standard_modell_id in _modell_ids else 0
 
 st.sidebar.selectbox(
-    "🤖 AI-modell",
+    tr("profil_ai_modell"),
     options=_modell_ids,
     format_func=lambda mid: _modell_labels.get(mid, mid),
     index=_modell_default_idx,
     key="openrouter_model",
-    help="Krever OPENROUTER_API_KEY. Flere modeller: openrouter.ai/models",
+    help=tr("profil_ai_modell_help"),
+)
+st.sidebar.checkbox(
+    tr("perf_debug_label"),
+    value=st.session_state.get("vis_perf_debug", False),
+    key="vis_perf_debug",
+    help=tr("perf_debug_help"),
 )
 
 
@@ -249,22 +249,22 @@ def _lagre_profil_ved_endring(ny_profil):
         st.session_state._profil_lagret_snapshot = snapshot
 
 
-with st.sidebar.expander("👤 Din Reiseprofil", expanded=False):
+with st.sidebar.expander(tr("profil_expander"), expanded=False):
     _profil = _normaliser_profil(st.session_state.profil)
     ny_reise_folge = st.selectbox(
-        "Reisefølge",
+        tr("profil_reise_folge"),
         options=PROFIL_REISE_FOLGE,
         index=PROFIL_REISE_FOLGE.index(_profil["reise_folge"]),
         key="profil_reise_folge",
     )
     ny_budsjett = st.selectbox(
-        "Budsjettnivå",
+        tr("profil_budsjett"),
         options=PROFIL_BUDSJETT,
         index=PROFIL_BUDSJETT.index(_profil["budsjett"]),
         key="profil_budsjett",
     )
     ny_hovedinteresse = st.selectbox(
-        "Hovedinteresse",
+        tr("profil_hovedinteresse"),
         options=PROFIL_INTERESSE,
         index=PROFIL_INTERESSE.index(_profil["hovedinteresse"]),
         key="profil_hovedinteresse",
@@ -277,65 +277,6 @@ with st.sidebar.expander("👤 Din Reiseprofil", expanded=False):
         }
     )
     st.caption(tr("profil_lagres_auto"))
-
-st.sidebar.caption(tr("affiliate_disclosure"))
-affiliate_stats = get_affiliate_stats()
-with st.sidebar.expander(tr("affiliate_stats_header"), expanded=False):
-    st.metric(tr("affiliate_total_clicks"), affiliate_stats["total_clicks"])
-    if affiliate_stats["latest_click"]:
-        st.caption(f"{tr('affiliate_latest_click')}: {affiliate_stats['latest_click']}")
-    if affiliate_stats["top_places"]:
-        st.write(tr("affiliate_top_places"))
-        for row in affiliate_stats["top_places"]:
-            st.caption(
-                f"{row['place_name']} ({row['city']}, {row['country']}): {row['clicks']}"
-            )
-    if affiliate_stats.get("top_partners"):
-        st.write(tr("affiliate_top_partners"))
-        partner_navn = {
-            "booking": "🏨 Hotell",
-            "car": "🚗 Leiebil",
-            "food": "🍔 Matlevering",
-        }
-        for row in affiliate_stats["top_partners"]:
-            st.caption(f"{partner_navn.get(row['partner'], row['partner'])}: {row['clicks']}")
-    if affiliate_stats["top_sources"]:
-        st.write(tr("affiliate_top_sources"))
-        for row in affiliate_stats["top_sources"]:
-            st.caption(f"{row['source_view']}: {row['clicks']}")
-
-with st.sidebar.expander(tr("affiliate_tjenester", "🧳 Våre Reisepartnere"), expanded=False):
-    st.caption(tr("affiliate_tjenester_hint", "Sammenlign hotell, leiebil og matlevering."))
-    _aid = st.secrets.get("BOOKING_AID", "888888")
-    _glovo = st.secrets.get("GLOVO_AFFILIATE_URL", "")
-    _wolt = st.secrets.get("WOLT_AFFILIATE_URL", "")
-    _uber = st.secrets.get("UBEREATS_AFFILIATE_URL", "")
-
-    sb1, sb2 = st.columns(2)
-    with sb1:
-        st.link_button(
-            f"{tr('affiliate_leiebil_btn')} · {tr('affiliate_sidebar_spania')}",
-            _bygg_leiebil_url("Alicante", "Spania", _aid, "ES"),
-            use_container_width=True,
-        )
-        st.link_button(
-            f"{tr('affiliate_mat_btn')} · {tr('affiliate_sidebar_spania')}",
-            _bygg_matlevering_url("Torrevieja", "Spania", "ES", spraak, _glovo, _wolt, _uber),
-            use_container_width=True,
-        )
-    with sb2:
-        st.link_button(
-            f"{tr('affiliate_leiebil_btn')} · {tr('affiliate_sidebar_norge')}",
-            _bygg_leiebil_url("Oslo", "Norge", _aid, "NO"),
-            use_container_width=True,
-        )
-        st.link_button(
-            f"{tr('affiliate_mat_btn')} · {tr('affiliate_sidebar_norge')}",
-            _bygg_matlevering_url("Oslo", "Norge", "NO", spraak, _glovo, _wolt, _uber),
-            use_container_width=True,
-        )
-
-
 
 API_KEY = os.environ.get("OPENROUTER_API_KEY", "") or st.secrets.get("OPENROUTER_API_KEY", "")
 MODEL = st.session_state.get("openrouter_model", _standard_modell_id)
@@ -393,6 +334,51 @@ def hent_koordinater_for_sok(sted):
     except Exception:
         pass
     return None, None
+
+
+async def sok_wikivoyage_async(sted):
+    """Async wrapper (kjører sync-kall parallelt i tråd)."""
+    return await asyncio.to_thread(sok_wikivoyage, sted)
+
+
+async def hent_koordinater_for_sok_async(sted):
+    """Async wrapper (kjører sync-kall parallelt i tråd)."""
+    return await asyncio.to_thread(hent_koordinater_for_sok, sted)
+
+
+async def _hent_forste_geotreff_async(sokekandidater):
+    """
+    Slår opp flere geokodingskandidater parallelt og returnerer første treff
+    i samme prioriterte rekkefølge som input-listen.
+    """
+    if not sokekandidater:
+        return None, None, None
+    resultater = await asyncio.gather(
+        *(hent_koordinater_for_sok_async(navn) for navn in sokekandidater)
+    )
+    for navn, (lat, lon) in zip(sokekandidater, resultater):
+        if lat is not None and lon is not None:
+            return lat, lon, navn
+    return None, None, None
+
+
+def _run_async(coro):
+    """
+    Kjør en coroutine fra sync Streamlit-kode.
+    Streamlit kjører vanligvis uten aktiv event loop i tråden, så asyncio.run er ok.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if loop and loop.is_running():
+        # Fallback: kjør i ny event loop i egen tråd.
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            future = ex.submit(lambda: asyncio.run(coro))
+            return future.result()
+    return asyncio.run(coro)
 
 
 def _slug_tekst(tekst):
@@ -720,6 +706,7 @@ def _parse_json_innhold(tekst):
 
 def sanke_perler_for_omrade(omrade, antall=8, min_score=7, strict_mode=False):
     """Henter og kvalitetssikrer flere perlekandidater automatisk."""
+    total_start = time.perf_counter()
     if not API_KEY:
         raise RuntimeError(tr("sank_mangler_api"))
 
@@ -785,6 +772,7 @@ def sanke_perler_for_omrade(omrade, antall=8, min_score=7, strict_mode=False):
     forkastet_duplikat = 0
     forkastet_score = 0
     forkastet_geo = 0
+    kandidater_for_geo = []
 
     for rå in rå_liste:
         kandidat = _normaliser_agent_perle(rå, json.dumps(rå, ensure_ascii=False))
@@ -804,19 +792,37 @@ def sanke_perler_for_omrade(omrade, antall=8, min_score=7, strict_mode=False):
         if key in eksisterende or key in nye_nokler:
             forkastet_duplikat += 1
             continue
+        nye_nokler.add(key)
+        kandidater_for_geo.append({"kandidat": kandidat, "key": key})
 
-        lat, lon = hent_koordinater_for_sok(
+    async def _geokod_kandidat_async(kandidat):
+        lat, lon = await hent_koordinater_for_sok_async(
             f"{kandidat['navn']}, {kandidat['by']}, {kandidat['land']}"
         )
         if lat is None or lon is None:
-            lat, lon = hent_koordinater_for_sok(f"{kandidat['by']}, {kandidat['land']}")
+            lat, lon = await hent_koordinater_for_sok_async(f"{kandidat['by']}, {kandidat['land']}")
+        return lat, lon
+
+    async def _geokod_alle_kandidater_async(items, max_parallel=4):
+        sem = asyncio.Semaphore(max_parallel)
+
+        async def _worker(item):
+            async with sem:
+                lat, lon = await _geokod_kandidat_async(item["kandidat"])
+                return item, lat, lon
+
+        return await asyncio.gather(*(_worker(item) for item in items))
+
+    geo_start = time.perf_counter()
+    geokodede = _run_async(_geokod_alle_kandidater_async(kandidater_for_geo))
+    geo_elapsed_s = time.perf_counter() - geo_start
+    for item, lat, lon in geokodede:
         if lat is None or lon is None:
             forkastet_geo += 1
             continue
-
+        kandidat = item["kandidat"]
         kandidat["latitude"] = lat
         kandidat["longitude"] = lon
-        nye_nokler.add(key)
         godkjente.append(kandidat)
 
     rapport = {
@@ -825,6 +831,8 @@ def sanke_perler_for_omrade(omrade, antall=8, min_score=7, strict_mode=False):
         "forkastet_duplikat": forkastet_duplikat,
         "forkastet_score": forkastet_score,
         "forkastet_geo": forkastet_geo,
+        "tid_geo_s": round(geo_elapsed_s, 3),
+        "tid_total_s": round(time.perf_counter() - total_start, 3),
     }
     return godkjente, rapport
 
@@ -963,18 +971,7 @@ def _hent_sted_bilde_url_cached(sted_id, navn, by, land, latitude, longitude, st
 
 
 def vis_sted_foto(sted, key_suffix=""):
-    """Viser stedsfoto når bruker aktivt ber om det."""
-    bilde_key = f"foto_vis_{key_suffix or sted.get('id', '')}"
-    if not st.session_state.get(bilde_key):
-        if st.button(
-            tr("bilde_vis_knapp"),
-            key=f"{bilde_key}_knapp",
-            use_container_width=True,
-        ):
-            st.session_state[bilde_key] = True
-            st.rerun()
-        return
-
+    """Viser stedsfoto automatisk (Wikimedia eller forhåndslagret URL)."""
     bilde_url = _hent_sted_bilde_url_cached(
         sted.get("id", ""),
         sted.get("navn", ""),
@@ -991,78 +988,10 @@ def vis_sted_foto(sted, key_suffix=""):
         st.caption(tr("bilde_kilde").format(sted.get("navn", "")))
 
 
-def _affiliate_secrets():
-    return {
-        "aid": st.secrets.get("BOOKING_AID", "888888"),
-        "glovo": st.secrets.get("GLOVO_AFFILIATE_URL", ""),
-        "wolt": st.secrets.get("WOLT_AFFILIATE_URL", ""),
-        "uber": st.secrets.get("UBEREATS_AFFILIATE_URL", ""),
-    }
-
-
-def bygg_booking_url(by, land):
-    return _bygg_booking_url(by, land, _affiliate_secrets()["aid"])
-
-
-def bygg_leiebil_url(by, land, country_code=""):
-    return _bygg_leiebil_url(by, land, _affiliate_secrets()["aid"], country_code)
-
-
-def bygg_matlevering_url(by, land, country_code=""):
-    s = _affiliate_secrets()
-    return _bygg_matlevering_url(
-        by, land, country_code, spraak, s["glovo"], s["wolt"], s["uber"]
-    )
-
-
-def _affiliate_url_key(key_prefix, place_id, partner):
-    return f"affiliate_url_{partner}_{key_prefix}_{place_id}"
-
-
-def _affiliate_partners_for_place(place, fremhev_mat=False):
-    by = place.get("by", "")
-    land = place.get("land", "")
-    cc = place.get("country_code", "")
-    partners = [
-        ("booking", tr("affiliate_hotell_btn"), tr("affiliate_hotell_open"), lambda: bygg_booking_url(by, land)),
-        ("car", tr("affiliate_leiebil_btn"), tr("affiliate_leiebil_open"), lambda: bygg_leiebil_url(by, land, cc)),
-        ("food", tr("affiliate_mat_btn"), tr("affiliate_mat_open"), lambda: bygg_matlevering_url(by, land, cc)),
-    ]
-    if fremhev_mat:
-        partners = [partners[2], partners[0], partners[1]]
-    return partners
-
-
-def render_place_actions(place, source_view, key_prefix, fremhev_mat=False):
-    st.caption(tr("affiliate_praktisk"))
-    col_fav, col_h, col_b, col_m = st.columns(4)
-    with col_fav:
-        if st.button(T["favoritt_knapp"], key=f"{key_prefix}_add_{place['id']}", use_container_width=True):
-            add_itinerary_item(place)
-            st.success(T["favoritt_lagt_til"])
-
-    for col, (partner, btn_label, open_label, url_builder) in zip(
-        (col_h, col_b, col_m),
-        _affiliate_partners_for_place(place, fremhev_mat=fremhev_mat),
-    ):
-        url_key = _affiliate_url_key(key_prefix, place["id"], partner)
-        with col:
-            if st.button(btn_label, key=f"{key_prefix}_{partner}_{place['id']}", use_container_width=True):
-                url = url_builder()
-                log_affiliate_click(place, f"{source_view}:{partner}", spraak, url)
-                st.session_state[url_key] = url
-                st.success(tr("affiliate_logget"))
-
-    aktive_lenker = []
-    for partner, _, open_label, _ in _affiliate_partners_for_place(place, fremhev_mat=fremhev_mat):
-        url_key = _affiliate_url_key(key_prefix, place["id"], partner)
-        if st.session_state.get(url_key):
-            aktive_lenker.append((open_label.format(place["by"]), st.session_state[url_key]))
-
-    if aktive_lenker:
-        st.caption(tr("affiliate_disclosure"))
-        for label, url in aktive_lenker:
-            st.link_button(label, url, use_container_width=True)
+def render_favoritt_knapp(place, key_prefix):
+    if st.button(T["favoritt_knapp"], key=f"{key_prefix}_add_{place['id']}", use_container_width=True):
+        add_itinerary_item(place)
+        st.success(T["favoritt_lagt_til"])
 
 
 KART_FARGE_MAT = "#1B5E20"
@@ -1094,6 +1023,81 @@ KART_KATEGORI_FARGER = {
     "aktivitet": KART_FARGE_NATUR,
 }
 DEFAULT_KART_FARGE = "#B388FF"
+KART_SENTRUM_FARGE = "#2563EB"
+KART_TILES = "CartoDB Voyager"
+
+
+def _morkn_farge(hex_farge, factor=0.82):
+    h = hex_farge.lstrip("#")
+    if len(h) != 6:
+        return hex_farge
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"#{int(r * factor):02x}{int(g * factor):02x}{int(b * factor):02x}"
+
+
+def _nytt_folium_kart(location, zoom_start=4):
+    return folium.Map(location=location, zoom_start=zoom_start, tiles=KART_TILES)
+
+
+def _lag_modern_kart_div_icon(farge, *, variant="sted", label=None):
+    """SVG-kartnål med gradient, hvit kant og skygge (Material/Maps-stil)."""
+    uid = abs(hash((farge, variant, label))) % 1_000_000
+    farge_mork = _morkn_farge(farge)
+    label_safe = html.escape(str(label)) if label is not None else ""
+
+    if variant == "sentrum":
+        storrelse = 40
+        html_str = (
+            f'<div style="width:{storrelse}px;height:{storrelse}px;position:relative;">'
+            f'<div style="position:absolute;inset:0;border-radius:50%;'
+            f'background:rgba(37,99,235,0.18);"></div>'
+            f'<div style="position:absolute;inset:6px;border-radius:50%;'
+            f'background:linear-gradient(145deg,#60a5fa,{KART_SENTRUM_FARGE});'
+            f'border:3px solid #fff;box-shadow:0 4px 16px rgba(29,78,216,0.45);'
+            f'display:flex;align-items:center;justify-content:center;">'
+            f'<div style="width:10px;height:10px;border-radius:50%;background:#fff;'
+            f'box-shadow:0 0 0 2px rgba(255,255,255,0.5);"></div></div></div>'
+        )
+        return folium.DivIcon(
+            html=html_str,
+            icon_size=(storrelse, storrelse),
+            icon_anchor=(storrelse // 2, storrelse // 2),
+            class_name="he-kart-sentrum",
+        )
+
+    pin_w, pin_h = 34, 44
+    if label:
+        inner_symbol = (
+            f'<circle cx="17" cy="12" r="8.5" fill="#ffffff"/>'
+            f'<text x="17" y="12.5" text-anchor="middle" dominant-baseline="middle" '
+            f'font-size="10" font-weight="700" fill="{farge}" '
+            f'font-family="Segoe UI,Arial,sans-serif">{label_safe}</text>'
+        )
+    else:
+        inner_symbol = '<circle cx="17" cy="12" r="5" fill="#ffffff" opacity="0.96"/>'
+
+    html_str = (
+        f'<div style="width:{pin_w}px;height:{pin_h}px;margin:0;padding:0;">'
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{pin_w}" height="{pin_h}" '
+        f'viewBox="0 0 34 44" role="img" aria-hidden="true">'
+        f"<defs>"
+        f'<filter id="he-sh-{uid}" x="-25%" y="-15%" width="150%" height="140%">'
+        f'<feDropShadow dx="0" dy="2.5" stdDeviation="2.2" flood-color="#0f172a" '
+        f'flood-opacity="0.32"/></filter>'
+        f'<linearGradient id="he-g-{uid}" x1="0%" y1="0%" x2="0%" y2="100%">'
+        f'<stop offset="0%" stop-color="{farge}"/><stop offset="100%" stop-color="{farge_mork}"/>'
+        f"</linearGradient></defs>"
+        f'<path filter="url(#he-sh-{uid})" fill="url(#he-g-{uid})" stroke="#ffffff" '
+        f'stroke-width="2.5" stroke-linejoin="round" '
+        f'd="M17 2C10.1 2 5 7.1 5 13.2c0 7.5 12 28.8 12 28.8s12-21.3 12-28.8C29 7.1 23.9 2 17 2z"/>'
+        f"{inner_symbol}</svg></div>"
+    )
+    return folium.DivIcon(
+        html=html_str,
+        icon_size=(pin_w, pin_h),
+        icon_anchor=(pin_w // 2, pin_h - 1),
+        class_name="he-modern-marker",
+    )
 
 
 def kart_markor_farge(sted):
@@ -1156,45 +1160,22 @@ def lag_sted_kart_popup(sted):
 
 
 def legg_til_sted_markor(kart, sted):
-    """Legger til én fargekodet CircleMarker med popup på et Folium-kart."""
+    """Legger til én moderne fargekodet kartnål med popup."""
     farge = kart_markor_farge(sted)
-    folium.CircleMarker(
+    folium.Marker(
         location=[sted["latitude"], sted["longitude"]],
-        radius=4,
-        weight=1,
-        color=farge,
-        fill=True,
-        fill_color=farge,
-        fill_opacity=0.85,
         tooltip=f"{sted.get('navn', '')} ({sted.get('by', '')})",
         popup=folium.Popup(lag_sted_kart_popup(sted), max_width=280),
+        icon=_lag_modern_kart_div_icon(farge),
     ).add_to(kart)
-
-
-def _radar_div_icon(sted):
-    """Kompakt marker som ligner standard Google Maps-størrelse."""
-    er_spisested = sted.get("source_type") == "restaurant"
-    bakgrunn = KART_FARGE_MAT if er_spisested else "#C4B5FD"
-    symbol = "🍴" if er_spisested else "★"
-    return folium.DivIcon(
-        html=(
-            f'<div style="width:18px;height:18px;border-radius:50%;'
-            f'background:{bakgrunn};color:#ffffff;display:flex;align-items:center;'
-            f'justify-content:center;font-size:11px;font-weight:700;'
-            f'box-shadow:0 1px 3px rgba(0,0,0,0.35);">{symbol}</div>'
-        ),
-        icon_size=(18, 18),
-        icon_anchor=(9, 9),
-        class_name="radar-div-icon",
-    )
 
 
 def lag_stedskart(steder, sentrum=None, zoom_start=4):
     """Folium-kart med kategorifarger og bilde-popup for en liste steder."""
     if sentrum:
-        m = folium.Map(location=[sentrum[0], sentrum[1]], zoom_start=zoom_start, tiles="OpenStreetMap")
+        m = _nytt_folium_kart([sentrum[0], sentrum[1]], zoom_start=zoom_start)
     else:
-        m = folium.Map(location=[54.0, 14.0], zoom_start=zoom_start, tiles="OpenStreetMap")
+        m = _nytt_folium_kart([54.0, 14.0], zoom_start=zoom_start)
     for sted in steder:
         if sted.get("latitude") is None or sted.get("longitude") is None:
             continue
@@ -1241,13 +1222,13 @@ def optimaliser_reiserute_naermeste_nabo(items):
 
 def lag_chat_oppdag_kart(lat, lon, sentrum_navn="", radius_km=50):
     """Chat-kart med blått søkepunkt og nærliggende perler/spisesteder innen radius."""
-    m = folium.Map(location=[lat, lon], zoom_start=9, tiles="OpenStreetMap")
+    m = _nytt_folium_kart([lat, lon], zoom_start=9)
     navn = html.escape(sentrum_navn or "Søkepunkt")
     folium.Marker(
         location=[lat, lon],
         tooltip=sentrum_navn or "Søkepunkt",
         popup=f"<b>{navn}</b>",
-        icon=folium.Icon(color="blue", icon="info-sign"),
+        icon=_lag_modern_kart_div_icon(KART_SENTRUM_FARGE, variant="sentrum"),
     ).add_to(m)
 
     for sted in SKJULTE_PERLER_DB + LOKALE_SPISESTEDER_DB:
@@ -1263,18 +1244,18 @@ def lag_chat_oppdag_kart(lat, lon, sentrum_navn="", radius_km=50):
 
 def lag_radar_kart(treff_liste, sentrum=None, sentrum_navn="", zoom_start=7):
     if sentrum:
-        m = folium.Map(
-            location=[sentrum[0], sentrum[1]],
-            zoom_start=zoom_start,
-            tiles="OpenStreetMap",
-        )
+        m = _nytt_folium_kart([sentrum[0], sentrum[1]], zoom_start=zoom_start)
         folium.Marker(
             location=[sentrum[0], sentrum[1]],
             tooltip=sentrum_navn,
-            icon=folium.Icon(color="blue", icon="search"),
+            popup=folium.Popup(
+                f'<div style="font-family:Segoe UI,sans-serif;"><b>{html.escape(sentrum_navn or "")}</b></div>',
+                max_width=220,
+            ),
+            icon=_lag_modern_kart_div_icon(KART_SENTRUM_FARGE, variant="sentrum"),
         ).add_to(m)
     else:
-        m = folium.Map(location=[54.0, 14.0], zoom_start=zoom_start, tiles="OpenStreetMap")
+        m = _nytt_folium_kart([54.0, 14.0], zoom_start=zoom_start)
 
     for treff in treff_liste:
         place = treff["data"]
@@ -1282,8 +1263,8 @@ def lag_radar_kart(treff_liste, sentrum=None, sentrum_navn="", zoom_start=7):
         folium.Marker(
             location=[place["latitude"], place["longitude"]],
             tooltip=f"{place['navn']} ({place['by']})",
-            popup=popup,
-            icon=_radar_div_icon(place),
+            popup=folium.Popup(popup, max_width=260),
+            icon=_lag_modern_kart_div_icon(kart_markor_farge(place)),
         ).add_to(m)
     return m
 
@@ -1410,7 +1391,7 @@ def generer_ai_reiserute(items, dager):
     )
     prompt = (
         f"Lag en konkret {dager}-dagers reiserute basert på disse lagrede Radar/favoritt-stedene. "
-        "Prioriter korte transportetapper, skjulte perler, lokale spisesteder og naturlige Booking.com-overnattingsforslag. "
+        "Prioriter korte transportetapper, skjulte perler og lokale spisesteder. "
         f"Svar på {'norsk' if spraak == 'NO' else 'English'}.\n\n{steder}"
     )
     yield from generer_reiseekspert_stream(prompt)
@@ -1559,34 +1540,46 @@ def sorter_steder_etter_profil(steder, hovedinteresse=None):
     return sorted(steder, key=lambda s: _profil_sorteringsnøkkel(s, hovedinteresse))
 
 
+def _profil_tekst_naturlig(hovedinteresse):
+    """Gjør profilinteresse lesbar i setninger (f.eks. «kultur og historie»)."""
+    return (hovedinteresse or "").replace(" & ", " og ").lower()
+
+
+def vis_sted_type(sted):
+    """Viser pene type-etiketter i stedet for rå databaseverdier."""
+    raw = (sted.get("profil_kategori") or sted.get("type") or "").strip().lower()
+    mapping = {
+        "kultur": "type_kultur",
+        "natur": "type_natur",
+        "gastronomi": "type_gastronomi",
+        "historie": "type_historie",
+        "eventyr": "type_eventyr",
+        "museum": "type_museum",
+        "arkitektur": "type_arkitektur",
+        "mat & vin": "type_gastronomi",
+        "kultur & historie": "type_kultur",
+        "natur & aktivitet": "type_natur",
+    }
+    key = mapping.get(raw)
+    if key:
+        return tr(key)
+    if raw:
+        return raw.replace("_", " ").capitalize()
+    return ""
+
+
 def bygg_radar_ki_innsikt(valgt_land, radar_treff, hovedinteresse):
-    """Lager dynamisk KI-innsikt for radar ved landvalg."""
+    """Lager dynamisk innsikt for radar ved landvalg."""
     if not valgt_land:
         return ""
+    profil_tekst = _profil_tekst_naturlig(hovedinteresse)
     antall = len(radar_treff or [])
     if antall == 0:
-        if _spraak == "EN":
-            return (
-                f"You selected {valgt_land} - we currently do not have matching gems "
-                f"for your profile ({hovedinteresse}) in this area."
-            )
-        return (
-            f"Du har valgt {valgt_land} - vi har foreløpig ingen treff som matcher "
-            f"profilen din ({hovedinteresse}) i dette området."
-        )
+        return tr("radar_innsikt_tom").format(valgt_land, profil_tekst)
 
     naermeste = min(radar_treff, key=lambda t: t.get("avstand", 999999))
     by_navn = naermeste.get("data", {}).get("by") or valgt_land
-
-    if _spraak == "EN":
-        return (
-            f"You selected {valgt_land} - we found {antall} gems near {by_navn} "
-            f"matching your profile for {hovedinteresse}."
-        )
-    return (
-        f"Du har valgt {valgt_land} - vi har funnet {antall} perler i nærheten av "
-        f"{by_navn} som passer profilen din for {hovedinteresse}."
-    )
+    return tr("radar_innsikt_treff").format(valgt_land, antall, by_navn, profil_tekst)
 
 
 def sted_tittel_med_profil(sted, standard_emoji):
@@ -1645,11 +1638,7 @@ def _hent_lokasjon_fra_sporsmal(sporsmal):
     if sporsmal not in søkekandidater:
         søkekandidater.append(sporsmal[:120])
 
-    for navn in søkekandidater:
-        lat, lon = hent_koordinater_for_sok(navn)
-        if lat is not None and lon is not None:
-            return lat, lon, navn
-    return None, None, None
+    return _run_async(_hent_forste_geotreff_async(søkekandidater))
 
 
 def _format_rag_linje(sted, avstand_km=None):
@@ -1826,6 +1815,7 @@ with fane0:
                     key="radar_vis_alle_perler",
                 )
                 if vis_alle_perler:
+                    st.caption(tr("radar_vis_alle_hint"))
                     st.markdown(
                         f'<p style="margin:0 0 0.35rem 0;color:#9CA3AF;text-decoration:line-through;'
                         f'font-size:0.9rem;">{T["radar_radius"]}</p>',
@@ -1942,7 +1932,7 @@ with fane0:
                 st.markdown(tr("kart_valgt_sted"))
                 st.markdown(
                     f"**{valgt_perle['navn']}** — {valgt_perle['by']}, {valgt_perle['land']}  \n"
-                    f"*{valgt_perle.get('type', '').capitalize()}*"
+                    f"*{vis_sted_type(valgt_perle)}*"
                 )
                 if valgt_treff["avstand"] > 0:
                     st.caption(f"{valgt_treff['avstand']} km {T['radar_unna']}")
@@ -1995,7 +1985,7 @@ with fane0:
                                 f"""
                             <div class="travel-card">
                                 <h3>{perle_tittel}</h3>
-                                <p><b>📍 {p["by"]}, {p["land"]}</b> • <i>{p["type"].capitalize()}</i></p>
+                                <p><b>📍 {p["by"]}, {p["land"]}</b> • <i>{vis_sted_type(p)}</i></p>
                                 <p>{p["beskrivelse"]}</p>
                             </div>
                             """,
@@ -2005,11 +1995,9 @@ with fane0:
                                 st.info(f"💡 {p['tips']}")
                             if p.get("beste_tid"):
                                 st.caption(tr("perler_beste_tid").format(p["beste_tid"]))
-                            render_place_actions(
+                            render_favoritt_knapp(
                                 p,
-                                "food" if er_mat else "hidden_gems",
                                 "mat" if er_mat else "perle",
-                                fremhev_mat=er_mat,
                             )
                             st.write("<br>", unsafe_allow_html=True)
         else:
@@ -2076,14 +2064,14 @@ with fane1:
                             f"""
                         <div class="travel-card">
                             <h3>{mat_tittel}</h3>
-                            <p><b>📍 {s["by"]}, {s["land"]}</b> • <i>{s["type"].capitalize()}</i></p>
+                            <p><b>📍 {s["by"]}, {s["land"]}</b> • <i>{vis_sted_type(s)}</i></p>
                             <p>{s["beskrivelse"]}</p>
                         </div>
                         """,
                             unsafe_allow_html=True,
                         )
                         st.success(f"{T['mat_pris']} {s['pris']}")
-                        render_place_actions(s, "food", "mat", fremhev_mat=True)
+                        render_favoritt_knapp(s, "mat")
                         st.write("<br>", unsafe_allow_html=True)
     else:
         st.info(T["mat_ingen_treff"])
@@ -2155,6 +2143,13 @@ with fane2:
                     sank_rapport.get("forkastet_geo", 0),
                 )
             )
+            if st.session_state.get("vis_perf_debug"):
+                st.caption(
+                    tr("perf_sank").format(
+                        sank_rapport.get("tid_geo_s", 0),
+                        sank_rapport.get("tid_total_s", 0),
+                    )
+                )
 
         if sank_kandidater:
             sortering = st.selectbox(
@@ -2349,14 +2344,22 @@ with fane2:
                     if sporsmal.lower().startswith("wiki ")
                     else sporsmal[4:].strip()
                 )
+                wiki_geo_start = time.perf_counter()
                 with st.spinner(T["chat_wiki_spinner"].format(sted_for_kart)):
-                    wiki_info = sok_wikivoyage(sted_for_kart)
+                    async def _wiki_og_geo():
+                        return await asyncio.gather(
+                            sok_wikivoyage_async(sted_for_kart),
+                            hent_koordinater_for_sok_async(sted_for_kart),
+                        )
+
+                    wiki_info, (lat, lon) = _run_async(_wiki_og_geo())
+                wiki_geo_elapsed = time.perf_counter() - wiki_geo_start
 
                 if wiki_info and "Ingen" not in wiki_info:
                     st.markdown(f"{T['chat_wiki_hentet']}\n> *{wiki_info}*")
                     wiki_kontekst = f"Kontekstinformasjon fra Wikivoyage: {wiki_info}"
-
-                lat, lon = hent_koordinater_for_sok(sted_for_kart)
+                if st.session_state.get("vis_perf_debug"):
+                    st.caption(tr("perf_wiki_geo").format(f"{wiki_geo_elapsed:.3f}"))
 
             fullt_svar = st.write_stream(generer_reiseekspert_stream(sporsmal, wiki_kontekst))
             synlig_svar = synlig_ai_svar(fullt_svar or "")
@@ -2455,13 +2458,23 @@ with fane3:
         )
 
         if any(item.get("latitude") and item.get("longitude") for item in itinerary_items):
-            m = folium.Map(location=[54.0, 14.0], zoom_start=4, tiles="OpenStreetMap")
+            m = _nytt_folium_kart([54.0, 14.0], zoom_start=4)
+            rekke_nr = 0
             for item in itinerary_items:
                 if item.get("latitude") and item.get("longitude"):
+                    rekke_nr += 1
                     folium.Marker(
                         location=[item["latitude"], item["longitude"]],
-                        tooltip=f"{item['navn']} ({item['by']})",
-                        popup=f"<b>{item['navn']}</b><br>{item['by']}, {item['land']}",
+                        tooltip=f"{rekke_nr}. {item['navn']} ({item['by']})",
+                        popup=folium.Popup(
+                            f"<b>{rekke_nr}. {html.escape(item['navn'])}</b><br>"
+                            f"{html.escape(item['by'])}, {html.escape(item['land'])}",
+                            max_width=260,
+                        ),
+                        icon=_lag_modern_kart_div_icon(
+                            kart_markor_farge(item),
+                            label=str(rekke_nr),
+                        ),
                     ).add_to(m)
             st_folium(m, width=900, height=420, returned_objects=[], key="reiseplan_kart")
 
@@ -2471,17 +2484,13 @@ with fane3:
                 st.markdown(f"### {item['navn']}")
                 st.caption(f"{item['by']}, {item['land']} • {item['type']}")
                 st.write(item["beskrivelse"])
-                col_link, col_remove = st.columns(2)
-                with col_link:
-                    render_place_actions(item, "itinerary", "reiseplan")
-                with col_remove:
-                    if st.button(
-                        tr("reiseplan_fjern"),
-                        key=f"reiseplan_remove_{item['id']}",
-                        use_container_width=True,
-                    ):
-                        remove_itinerary_item(item["id"])
-                        st.rerun()
+                if st.button(
+                    tr("reiseplan_fjern"),
+                    key=f"reiseplan_remove_{item['id']}",
+                    use_container_width=True,
+                ):
+                    remove_itinerary_item(item["id"])
+                    st.rerun()
 
         dager = st.slider(
             T["reiseplan_ai_prompt"],
