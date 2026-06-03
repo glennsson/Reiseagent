@@ -42,6 +42,16 @@ python -m streamlit run app.py
 | `place_images.py` | Bilder fra Wikimedia |
 | `translations.py` | Norsk / engelsk |
 
+## Forhåndslaste bilder (valgfritt)
+
+For raskere første visning av stedsbilder:
+
+```powershell
+python scripts/precache_images.py
+```
+
+Dette oppdaterer `data/preloaded_images.json`, som appen leser automatisk.
+
 ## Tips
 
 - Ikke committ `.venv/`, `venv/` eller `.streamlit/secrets.toml` (se `.gitignore`).

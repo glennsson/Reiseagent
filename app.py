@@ -229,6 +229,12 @@ st.sidebar.selectbox(
     help=tr("profil_ai_modell_help"),
 )
 st.sidebar.checkbox(
+    tr("bilde_autoload_label"),
+    value=st.session_state.get("bilde_autoload_wiki", False),
+    key="bilde_autoload_wiki",
+    help=tr("bilde_autoload_help"),
+)
+st.sidebar.checkbox(
     tr("perf_debug_label"),
     value=st.session_state.get("vis_perf_debug", False),
     key="vis_perf_debug",
@@ -971,7 +977,26 @@ def _hent_sted_bilde_url_cached(sted_id, navn, by, land, latitude, longitude, st
 
 
 def vis_sted_foto(sted, key_suffix=""):
-    """Viser stedsfoto automatisk (Wikimedia eller forhåndslagret URL)."""
+    """Viser forhåndslagrede bilder med én gang; ellers lazy Wikipedia-oppslag."""
+    suffix = key_suffix or sted.get("id", "")
+    forhånd = (sted.get("image_url") or "").strip()
+    if forhånd:
+        st.image(forhånd, use_container_width=True)
+        st.caption(tr("bilde_kilde").format(sted.get("navn", "")))
+        return
+
+    last_nokkel = f"foto_last_{suffix}"
+    if not st.session_state.get("bilde_autoload_wiki"):
+        if not st.session_state.get(last_nokkel):
+            if st.button(
+                tr("bilde_vis_knapp"),
+                key=f"foto_btn_{suffix}",
+                use_container_width=True,
+            ):
+                st.session_state[last_nokkel] = True
+                st.rerun()
+            return
+
     bilde_url = _hent_sted_bilde_url_cached(
         sted.get("id", ""),
         sted.get("navn", ""),

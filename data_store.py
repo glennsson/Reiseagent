@@ -144,6 +144,20 @@ def _spania_restauranter():
     ]
 
 
+_PRELOADED_IMAGES_CACHE = None
+
+
+def _get_preloaded_images():
+    global _PRELOADED_IMAGES_CACHE
+    if _PRELOADED_IMAGES_CACHE is None:
+        path = Path(__file__).with_name("data") / "preloaded_images.json"
+        if path.is_file():
+            _PRELOADED_IMAGES_CACHE = json.loads(path.read_text(encoding="utf-8"))
+        else:
+            _PRELOADED_IMAGES_CACHE = {}
+    return _PRELOADED_IMAGES_CACHE
+
+
 def normalize_place(sted, source_type):
     country = sted.get("land", "")
     country_code = sted.get("country_code", LAND_KODER.get(country, ""))
@@ -175,6 +189,10 @@ def normalize_place(sted, source_type):
             place["source_type"],
         ]
     ).lower()
+    if not place["image_url"]:
+        forhånd = _get_preloaded_images().get(place["id"])
+        if forhånd:
+            place["image_url"] = forhånd
     return place
 
 
