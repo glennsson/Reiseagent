@@ -32,18 +32,15 @@ from transport_planner import (
 from place_quality import (
     HOTELL_MAKS_EURO_DOBLELTROM,
     MIN_UNIKHETSGRAD,
+    _RESTAURANT_STERKE_ORD,
     filtrer_steder_for_app,
     oppfyller_visning_kriterier,
     godkjent_hotel_kandidat as _godkjent_hotel_kandidat,
     godkjent_restaurant_kandidat as _godkjent_restaurant_kandidat,
     hotell_pris_innen_grense as _hotell_pris_innen_grense,
-    klassifiser_restaurant_fra_perle as _klassifiser_restaurant_fra_perle,
     klassifiser_source_type_fra_perle as _klassifiser_source_type_fra_perle,
     normaliser_saerhetsscore as _normaliser_saerhetsscore,
     score_saerhetstekst as _score_saerhetstekst,
-    tekst_for_sted_sjekk as _tekst_for_restaurant_sjekk,
-    er_kjede_restaurant as _er_kjede_restaurant,
-    er_kjede_hotell as _er_kjede_hotell,
 )
 
 
@@ -346,17 +343,22 @@ for _lang, _keys in _HOTELL_TEKST_FALLBACK.items():
     for _k, _v in _keys.items():
         TEKSTER[_lang][_k] = _v
 
-T = {**TEKSTER["NO"], **TEKSTER[_spraak]}
+T: dict[str, str] = {**TEKSTER["NO"], **TEKSTER[_spraak]}
 
 # Oppfrisk stedlister etter språk/tekster er satt (hver script rerun)
 SKJULTE_PERLER_DB, LOKALE_SPISESTEDER_DB, LOKALE_HOTELLER_DB = _last_lokale_stedlister()
 
 
-def tr(key, default=None):
+def tr(key: str, default: str | None = None) -> str:
     """Oversettelse: aktivt språk med norsk fallback."""
     if default is not None:
-        return T.get(key, default)
-    return T.get(key, TEKSTER["NO"].get(key, key))
+        val = T.get(key, default)
+        return val if isinstance(val, str) else default
+    val = T.get(key)
+    if isinstance(val, str):
+        return val
+    fallback = TEKSTER["NO"].get(key, key)
+    return fallback if isinstance(fallback, str) else key
 
 
 # AI-modell (OpenRouter) — velg i sidemeny eller sett OPENROUTER_MODEL i secrets.toml
@@ -376,7 +378,7 @@ def _standard_modell():
 
 
 _modell_ids = [m[0] for m in MODELL_ALTERNATIVER]
-_modell_labels = {m[0]: m[1] for m in MODELL_ALTERNATIVER}
+_modell_labels: dict[str, str] = {m[0]: m[1] for m in MODELL_ALTERNATIVER}
 _standard_modell_id = _standard_modell()
 if _standard_modell_id not in _modell_ids:
     _standard_modell_id = _modell_ids[0]
