@@ -1,7 +1,14 @@
 import json
+import sys
 import time
 import os
 from datetime import datetime
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 # --- INTELLIGENT SJEKK MOT BÅDE DATABASE OG GAMMEL TXT-FIL ---
 EKSISTERENDE_NAVN = []

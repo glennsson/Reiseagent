@@ -162,6 +162,8 @@ def _openrouter_post(payload, timeout=30, *, stream=False):
             f"{_openrouter_fejl_tekst(response)} "
             "Velg en annen modell i sidemenyen (f.eks. Gemini 2.5 Flash)."
         )
+    if response.status_code == 402:
+        raise RuntimeError(tr("openrouter_402"))
     response.raise_for_status()
     return response
 
@@ -1265,11 +1267,14 @@ def vis_sted_foto(sted, key_suffix=""):
         st.caption(tr("bilde_kilde").format(sted.get("navn", "")))
 
 
-def render_reiseplan_knapp(place, key_prefix):
+def render_reiseplan_knapp(place, key_prefix, index=None):
     """Kompakt pill-knapp for å legge sted i reiseplanen."""
+    key = f"plan_{key_prefix}_{place['id']}"
+    if index is not None:
+        key = f"{key}_{index}"
     if st.button(
         tr("favoritt_knapp"),
-        key=f"plan_{key_prefix}_{place['id']}",
+        key=key,
         type="secondary",
     ):
         add_itinerary_item(place)
@@ -2332,7 +2337,7 @@ with fane0:
                                 if p.get("source_type") == "hotel"
                                 else "perle"
                             )
-                            render_reiseplan_knapp(p, view_key)
+                            render_reiseplan_knapp(p, view_key, index=i + j)
                             st.write("<br>", unsafe_allow_html=True)
         else:
             st.info(T["perler_ingen_treff"])
@@ -2405,7 +2410,7 @@ with fane1:
                             unsafe_allow_html=True,
                         )
                         st.success(f"{T['mat_pris']} {s['pris']}")
-                        render_reiseplan_knapp(s, "mat")
+                        render_reiseplan_knapp(s, "mat", index=i + j)
                         st.write("<br>", unsafe_allow_html=True)
     else:
         st.info(T["mat_ingen_treff"])
@@ -2490,7 +2495,7 @@ with fane2:
                         if s.get("beste_tid"):
                             st.caption(tr("perler_beste_tid").format(s["beste_tid"]))
                         st.success(f"{tr('hotell_pris')} {s.get('pris', '€€')}")
-                        render_reiseplan_knapp(s, "hotell")
+                        render_reiseplan_knapp(s, "hotell", index=i + j)
                         st.write("<br>", unsafe_allow_html=True)
     else:
         st.info(tr("hotell_ingen_treff"))
