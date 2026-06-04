@@ -3,7 +3,26 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from database import LOKALE_SPISESTEDER, SKJULTE_PERLER, SPANIA_MARKEDSDATA
+import database as _database
+
+LOKALE_SPISESTEDER = _database.LOKALE_SPISESTEDER
+SKJULTE_PERLER = _database.SKJULTE_PERLER
+SPANIA_MARKEDSDATA = _database.SPANIA_MARKEDSDATA
+def _hent_overnatting_kilde():
+    """Leser alltid fersk liste fra database.py (unngår tom cache etter filretting)."""
+    import importlib
+
+    importlib.reload(_database)
+    return list(
+        getattr(_database, "UNIKE_OVERNATTING", None)
+        or getattr(_database, "UNIKE_HOTELLER", [])
+    )
+
+
+# Bakoverkompatibilitet for «from data_store import UNIKE_HOTELLER»
+UNIKE_OVERNATTING = _hent_overnatting_kilde()
+UNIKE_HOTELLER = UNIKE_OVERNATTING
+from place_quality import filtrer_steder_for_app
 
 # Profilinteresser (UI) → interne DB-kategorier
 PROFIL_TIL_DB_TYPE = {
@@ -196,12 +215,20 @@ def normalize_place(sted, source_type):
     return place
 
 
+def hent_kuratert_overnatting_db():
+    """Kuratert overnatting fra database.py — skal alltid vises i appen."""
+    return [normalize_place(p, "hotel") for p in _hent_overnatting_kilde()]
+
+
 def seed_places():
     init_db()
     skjulte_kilde = list(SKJULTE_PERLER) + _spania_skjulte_perler()
     restaurant_kilde = list(LOKALE_SPISESTEDER) + _spania_restauranter()
+    hotell_places = [normalize_place(p, "hotel") for p in _hent_overnatting_kilde()]
     places = [normalize_place(p, "hidden_gem") for p in skjulte_kilde]
     places += [normalize_place(p, "restaurant") for p in restaurant_kilde]
+    places = filtrer_steder_for_app(places)
+    places += hotell_places
     with get_connection() as conn:
         # Fjern utdaterte duplikater fra tidligere «Rostiga Roadtrips»-navn (ny ID ved rename).
         conn.execute(
@@ -266,8 +293,9 @@ def _row_to_place(row):
     return place
 
 
-def get_places(source_type=None):
-    seed_places()
+def get_places(source_type=None, *, seed=True):
+    if seed:
+        seed_places()
     sql = """
         SELECT id, name, city, country, country_code, category, description,
                tips, best_time, price, latitude, longitude, source_type, search_key,

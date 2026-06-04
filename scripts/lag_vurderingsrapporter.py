@@ -1,73 +1,27 @@
+import argparse
 import json
 import os
-import argparse
+import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List
 
 import requests
 from dotenv import load_dotenv
-
-import sys
-from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from data_store import get_places
+from place_quality import (
+    MIN_UNIKHETSGRAD,
+    HOTELL_MAKS_EURO_DOBLELTROM,
+    vurder_eksisterende_sted,
+)
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
-
-
-def _score_uten_ai(sted: Dict) -> Dict:
-    tekst = " ".join(
-        [
-            str(sted.get("navn", "")),
-            str(sted.get("beskrivelse", "")),
-            str(sted.get("tips", "")),
-            str(sted.get("type", "")),
-        ]
-    ).lower()
-
-    score = 5
-    plusspoeng = {
-        "skjult": 2,
-        "hemmelig": 2,
-        "off-the-beaten-path": 2,
-        "unik": 1,
-        "lokal": 1,
-        "historie": 1,
-        "forlatt": 1,
-        "utsikt": 1,
-        "smal": 1,
-    }
-    minuspoeng = {
-        "eiffeltårnet": 4,
-        "eiffel tower": 4,
-        "resort": 2,
-        "all inclusive": 2,
-        "mainstream": 2,
-        "turistfelle": 2,
-    }
-    for token, value in plusspoeng.items():
-        if token in tekst:
-            score += value
-    for token, value in minuspoeng.items():
-        if token in tekst:
-            score -= value
-
-    if sted.get("latitude") is None or sted.get("longitude") is None:
-        score -= 1
-    if not (sted.get("beskrivelse") or "").strip():
-        score -= 1
-    if len((sted.get("beskrivelse") or "").split()) > 14:
-        score += 1
-
-    score = max(1, min(10, score))
-    status = "behold" if score >= 7 else "vurder sletting"
-    begrunnelse = "Regelbasert score av beskrivelse/tips/type + datakvalitet."
-    return {"score": score, "status": status, "begrunnelse": begrunnelse}
 
 
 def _batch(items: List[Dict], size: int) -> List[List[Dict]]:
@@ -124,15 +78,18 @@ def _vurder_med_ai(steder: List[Dict], batch_size: int = 30, retry_unknown: bool
                 "source_type": s.get("source_type", ""),
                 "beskrivelse": s.get("beskrivelse", ""),
                 "tips": s.get("tips", ""),
+                "pris": s.get("pris", ""),
             }
             for s in chunk
         ]
 
         prompt = (
-            "Vurder kvaliteten på hver perle for en app med skjulte perler i Europa. "
-            "Gi score 1-10 (høyere = mer unik/lokal/nyttig) og status 'behold' hvis score >= 7, ellers 'vurder sletting'. "
+            "Vurder kvaliteten på hver perle for appen Hemmelige Europa (skjulte, unike steder). "
+            f"Gi score 1-10. Status 'behold' hvis stedet er unikt og oppfyller: "
+            f"unikhetsgrad >= {MIN_UNIKHETSGRAD}, hotell kun med dobbeltrom <= {HOTELL_MAKS_EURO_DOBLELTROM} EUR, "
+            "ingen kjeder eller mainstream-turistfeller. Ellers 'vurder sletting'. "
             "Svar KUN gyldig JSON med format: "
-            '{"vurderinger":[{"id":"...","score":8,"status":"behold","begrunnelse":"..."}]}.\n\n'
+            '{"vurderinger":[{"id":"...","score":9,"status":"behold","begrunnelse":"..."}]}.\n\n'
             f"Kandidater:\n{json.dumps(kandidat_liste, ensure_ascii=False)}"
         )
         payload = {
@@ -182,13 +139,14 @@ def _vurder_med_ai(steder: List[Dict], batch_size: int = 30, retry_unknown: bool
                     "source_type": s.get("source_type", ""),
                     "beskrivelse": s.get("beskrivelse", ""),
                     "tips": s.get("tips", ""),
+                    "pris": s.get("pris", ""),
                 }
             ]
             prompt = (
-                "Vurder kvaliteten på denne perlen for en app med skjulte perler i Europa. "
-                "Gi score 1-10 og status 'behold' hvis score >= 7, ellers 'vurder sletting'. "
+                "Vurder kvaliteten på denne perlen for Hemmelige Europa. "
+                f"Status 'behold' kun ved unikhetsgrad >= {MIN_UNIKHETSGRAD} og hotell <= {HOTELL_MAKS_EURO_DOBLELTROM} EUR. "
                 "Svar KUN gyldig JSON med format: "
-                '{"vurderinger":[{"id":"...","score":8,"status":"behold","begrunnelse":"..."}]}.\n\n'
+                '{"vurderinger":[{"id":"...","score":9,"status":"behold","begrunnelse":"..."}]}.\n\n'
                 f"Kandidat:\n{json.dumps(kandidat_liste, ensure_ascii=False)}"
             )
             payload = {
@@ -232,6 +190,9 @@ def _skriv_rapport(path: str, tittel: str, steder: List[Dict], vurderinger: Dict
     linjer: List[str] = []
     linjer.append(f"{tittel}")
     linjer.append(f"Generert: {datetime.now().isoformat(timespec='seconds')}")
+    linjer.append(
+        f"Regler: min. unikhetsgrad {MIN_UNIKHETSGRAD}, hotell maks {HOTELL_MAKS_EURO_DOBLELTROM} € dobbeltrom"
+    )
     linjer.append(f"Antall steder: {len(steder)}")
     linjer.append("")
 
@@ -270,6 +231,8 @@ def _skriv_rapport(path: str, tittel: str, steder: List[Dict], vurderinger: Dict
             f"[{s.get('source_type','')}/{s.get('type','')}]"
         )
         linjer.append(f"     Score: {score_tekst} | Status: {v.get('status','ukjent')}")
+        if v.get("kilde"):
+            linjer.append(f"     Kilde: {v.get('kilde')}")
         linjer.append(f"     Begrunnelse: {v.get('begrunnelse','')}")
         if (s.get("beskrivelse") or "").strip():
             linjer.append(f"     Beskrivelse: {s.get('beskrivelse','')}")
@@ -292,26 +255,39 @@ def main() -> None:
         action="store_true",
         help="Slå av ekstra enkeltrunde for ukjente AI-vurderinger.",
     )
+    parser.add_argument(
+        "--kun-regler",
+        action="store_true",
+        help="Generer kun regelbasert rapport (ingen AI-kall).",
+    )
     args = parser.parse_args()
 
-    load_dotenv()
-    steder = get_places("hidden_gem") + get_places("restaurant")
+    load_dotenv(ROOT / ".env", override=True)
+    steder = (
+        get_places("hidden_gem")
+        + get_places("restaurant")
+        + get_places("hotel")
+    )
 
-    uten_ai = {s["id"]: _score_uten_ai(s) for s in steder}
+    uten_ai = {s["id"]: vurder_eksisterende_sted(s) for s in steder}
+    _skriv_rapport(
+        ROOT / "vurdering_perler_uten_ai.txt",
+        "PERLEVURDERING UTEN AI (samme regler som appen)",
+        steder,
+        uten_ai,
+    )
+
+    if args.kun_regler:
+        print("Lagde fil: vurdering_perler_uten_ai.txt")
+        return
+
     med_ai = _vurder_med_ai(
         steder,
         batch_size=max(1, args.batch_size),
         retry_unknown=not args.no_retry_unknown,
     )
-
     _skriv_rapport(
-        "vurdering_perler_uten_ai.txt",
-        "PERLEVURDERING UTEN AI (regelbasert)",
-        steder,
-        uten_ai,
-    )
-    _skriv_rapport(
-        "vurdering_perler_med_ai.txt",
+        ROOT / "vurdering_perler_med_ai.txt",
         "PERLEVURDERING MED AI",
         steder,
         med_ai,

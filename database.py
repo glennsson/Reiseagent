@@ -245,5 +245,94 @@ LOKALE_SPISESTEDER = [
     {"navn": "À la Mort Subite", "land": "Belgia", "by": "Brussel", "type": "kafé", "beskrivelse": "Historisk ølkafé.", "pris": "€5-12", "latitude": 50.8483, "longitude": 4.3564},
     {"navn": "The George Inn", "land": "Storbritannia", "by": "London", "type": "pub", "beskrivelse": "Shakespeare drakk her.", "pris": "£10-20", "latitude": 51.5042, "longitude": -0.0911},
     {"navn": "Kehoe's Pub", "land": "Irland", "by": "Dublin", "type": "pub", "beskrivelse": "Urørt siden 1800.", "pris": "€10-20", "latitude": 53.3417, "longitude": -6.2592},
-    {"navn": "Tima-Irma", "land": "Bosnia", "by": "Mostar", "type": "bosnisk", "beskrivelse": "Familierestaurant.", "pris": "€5-10", "latitude": 43.3369, "longitude": 17.8153}
+    {"navn": "Tima-Irma", "land": "Bosnia", "by": "Mostar", "type": "bosnisk", "beskrivelse": "Familiedrevet restaurant i Mostar med cevapi, baklava og utsikt mot Neretva — en klassiker blant lokalkjente.", "tips": "Sett deg ute hvis været er fint og du vil se elven.", "pris": "€5-10", "latitude": 43.3369, "longitude": 17.8153}
+]
+
+# ========================================
+# UNIK OVERNATTING (hotell, hytte, fyr, grotte, prestegård, …)
+# ========================================
+UNIKE_OVERNATTING = [
+    {
+        "navn": "Gruvsviten – Sala silvergruva",
+        "land": "Sverige",
+        "by": "Sala",
+        "type": "overnatting",
+        "beskrivelse": "Hotellsuite 155 meter under bakken i en av verdens best bevarte gruver. Oppvarmet rom ved mystiske gruvesjøer og underjordiske ganger.",
+        "tips": "Ta med varme klær til gruvegangene; rommet er oppvarmet.",
+        "beste_tid": "hele året",
+        "pris": "ca. 280 € dobbeltrom",
+        "latitude": 59.9075,
+        "longitude": 16.5702,
+    },
+    {
+        "navn": "CasAnus",
+        "land": "Belgia",
+        "by": "Kemzeke",
+        "type": "overnatting",
+        "beskrivelse": "Kunstinstallasjon og overnatting i et uvanlig skulpturelt bygg — en av Europas mest særegne overnattingsopplevelser.",
+        "tips": "Bestill langt i forvegen; svært begrenset kapasitet.",
+        "beste_tid": "april-oktober",
+        "pris": "ca. 95 € dobbeltrom",
+        "latitude": 51.2075,
+        "longitude": 4.0674,
+    },
+    {
+        "navn": "Borgvattnets Prästgård",
+        "land": "Sverige",
+        "by": "Borgvattnet",
+        "type": "overnatting",
+        "beskrivelse": "Historisk prestegård i Jämtland med overnatting og rykte som et av Sveriges mest omtalte «hemsökta» steder.",
+        "tips": "Book overnatting på forhånd om du vil være der etter åpningstid.",
+        "beste_tid": "hele året",
+        "pris": "ca. 120 € dobbeltrom",
+        "latitude": 63.4211,
+        "longitude": 15.8544,
+    },
+    {
+        "navn": "Fyrvokterboligen Bjuröklubb",
+        "land": "Sverige",
+        "by": "Lövånger",
+        "type": "overnatting",
+        "beskrivelse": "Overnatting i fyrvokterbolig på en utsatt odde ved Bottenviken — kveld og morgen med hav og svaberg nesten for deg selv.",
+        "tips": "Sesongbasert; sjekk tilgjengelighet for sommer.",
+        "beste_tid": "juni-juli",
+        "pris": "ca. 180 € dobbeltrom",
+        "latitude": 64.4811,
+        "longitude": 21.5714,
+    },
+    {
+        "navn": "Sassi-grottehotell i Matera",
+        "land": "Italia",
+        "by": "Matera",
+        "type": "overnatting",
+        "beskrivelse": "Overnatt i huleboliger og steinarkitektur i UNESCO-området Sassi — opplev byen når turistene har gått.",
+        "tips": "Velg sertifisert grottehotell i Sassi; kombiner med kveldsvandring.",
+        "beste_tid": "april-oktober",
+        "pris": "140-250 € dobbeltrom",
+        "latitude": 40.6667,
+        "longitude": 16.6000,
+    },
+    {
+        "navn": "Portmeirion Village",
+        "land": "Storbritannia",
+        "by": "Portmeirion",
+        "type": "overnatting",
+        "beskrivelse": "Overnatt i den planlagte «italienske» landsbyen i Wales — hotell og hus midt i et unikt designlandskap.",
+        "tips": "Book rom i landsbyen for åpningstid uten dagsturister.",
+        "beste_tid": "mai-september",
+        "pris": "200-290 € dobbeltrom",
+        "latitude": 52.9133,
+        "longitude": -4.0994,
+    },
+]
+
+# Bakoverkompatibilitet (eldre imports: from database import UNIKE_HOTELLER)
+UNIKE_HOTELLER = UNIKE_OVERNATTING
+
+__all__ = [
+    "SKJULTE_PERLER",
+    "LOKALE_SPISESTEDER",
+    "SPANIA_MARKEDSDATA",
+    "UNIKE_OVERNATTING",
+    "UNIKE_HOTELLER",
 ]

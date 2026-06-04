@@ -1,4 +1,3 @@
-import requests
 import json
 import time
 import os
@@ -36,138 +35,23 @@ if os.path.exists(arkiv_fil):
 
 print(f"🛡️ Total-skjold aktivert for {len(EKSISTERENDE_NAVN)} unike steder.\n")
 
+from wikivoyage_client import hent_artikkel_med_koordinater, hent_kategori_medlemmer
+
 
 def hent_wikivoyage_kategori(kategori_navn):
-    """Henter alle hovedartikler fra en kategori på Wikivoyage"""
-    url = "https://en.wikivoyage.org/w/api.php"
-    perler = []
-    
-    params = {
-        "action": "query",
-        "list": "categorymembers",
-        "cmtitle": f"Category:{kategori_navn}",
-        "cmlimit": "max",
-        "format": "json"
-    }
-    
-    headers = {
-        "User-Agent": "HemmeligeEuropaReiseApp/1.0 (kontakt: glenn@example.com)"
-    }
-    
-    response = requests.get(url, params=params, headers=headers).json()
-    
-    if "query" in response and "categorymembers" in response["query"]:
-        for item in response["query"]["categorymembers"]:
-            if ":" not in item["title"]:
-                perler.append(item["title"])
-                
-    return perler
+    """Henter alle hovedartikler fra en kategori på Wikivoyage."""
+    return hent_kategori_medlemmer(kategori_navn, limit=500, pause=0.1)
 
 
 def hent_detaljer_og_koordinater(sted_navn):
-    """Henter koordinater, land og sammendrag globalt med full tysk/engelsk/svensk/norsk Europa-ordbok"""
-    url = "https://en.wikivoyage.org/w/api.php"
-    
-    params = {
-        "action": "query",
-        "prop": "coordinates|extracts",
-        "titles": sted_navn,
-        "exintro": True,
-        "explaintext": True,
-        "exchars": 300,
-        "format": "json"
-    }
-    
-    headers = {
-        "User-Agent": "HemmeligeEuropaReiseApp/1.0 (kontakt: glenn@example.com)"
-    }
-    
-    try:
-        res = requests.get(url, params=params, headers=headers).json()
-        pages = res["query"]["pages"]
-        page_id = list(pages.keys())[0]
-        page_data = pages[page_id]
-        
-        # Sjekker og henter koordinatene live fra API-et
-        if "coordinates" in page_data:
-            lat = page_data["coordinates"][0]["lat"]
-            lon = page_data["coordinates"][0]["lon"]
-            
-            # Henter og renser beskrivelsen
-            beskrivelse = page_data.get("extracts", "En fantastisk destinasjon oppdaget via Wikivoyage.")
-            beskrivelse = beskrivelse.replace("\n", " ").strip()
-            
-            land = "Utlandet"
-            
-            # Fire-språklig geografisk ordbok for Europa
-            land_dict = {
-                "Germany": "Tyskland", "Deutschland": "Tyskland",
-                "France": "Frankrike", "Frankreich": "Frankrike",
-                "Italy": "Italia", "Italien": "Italia",
-                "Spain": "Spania", "Spanien": "Spania",
-                "United Kingdom": "Storbritannia", "Großbritannien": "Storbritannia", "UK": "Storbritannia", "England": "Storbritannia", "Scotland": "Storbritannia", "Wales": "Storbritannia",
-                "Netherlands": "Nederland", "Niederlande": "Nederland", "Holland": "Nederland",
-                "Belgium": "Belgia", "Belgien": "Belgia",
-                "Switzerland": "Sveits", "Schweiz": "Sveits",
-                "Austria": "Østerrike", "Österreich": "Østerrike",
-                "Luxembourg": "Luxembourg", "Luxemburg": "Luxembourg",
-                "Ireland": "Irland",
-                "Norway": "Norge", "Norwegen": "Norge",
-                "Sweden": "Sverige", "Schweden": "Sverige",
-                "Denmark": "Danmark", "Dänemark": "Danmark",
-                "Finland": "Finland", "Finnland": "Finland",
-                "Iceland": "Island",
-                "Poland": "Polen",
-                "Czech Republic": "Tsjekkia", "Czechia": "Tsjekkia", "Tschechien": "Tsjekkia", "Tjeckien": "Tsjekkia",
-                "Slovakia": "Slovakia", "Slowakei": "Slovakia",
-                "Hungary": "Ungarn", "Ungern": "Ungarn",
-                "Romania": "Romania", "Rumänien": "Romania",
-                "Bulgaria": "Bulgaria", "Bulgarien": "Bulgaria",
-                "Ukraine": "Ukraina",
-                "Belarus": "Belarus", "Weißrussland": "Belarus", "Hvitrussland": "Belarus",
-                "Moldova": "Moldova", "Moldawien": "Moldova",
-                "Estonia": "Estland",
-                "Latvia": "Latvia", "Lettland": "Latvia",
-                "Lithuania": "Litauen", "Litauen": "Litauen",
-                "Portugal": "Portugal",
-                "Greece": "Hellas", "Griechenland": "Hellas", "Grekland": "Hellas",
-                "Croatia": "Kroatia", "Kroatien": "Kroatia", "Croatia": "Kroatia",
-                "Slovenia": "Slovenia", "Slowenien": "Slovenia",
-                "Serbia": "Serbia", "Serbien": "Serbia",
-                "Montenegro": "Montenegro",
-                "Bosnia": "Bosnia og Hercegovina", "Bosnien": "Bosnia og Hercegovina", "Bosnia and Herzegovina": "Bosnia og Hercegovina",
-                "Albania": "Albania", "Albanien": "Albania",
-                "North Macedonia": "Nord-Makedonia", "Nordmazedonien": "Nord-Makedonia", "North Macedonia": "Nord-Makedonia", "Nordmakedonien": "Nord-Makedonia",
-                "Kosovo": "Kosovo",
-                "Malta": "Malta",
-                "Cyprus": "Kypros", "Zypern": "Kypros", "Cyprus": "Kypros", "Cypern": "Kypros",
-                "Monaco": "Monaco", "Andorra": "Andorra", "San Marino": "San Marino", "Liechtenstein": "Liechtenstein",
-                "Vatican City": "Vatikanstaten", "Vatikanstadt": "Vatikanstaten",
-                "Turkey": "Tyrkia", "Türkei": "Tyrkia", "Turkiet": "Tyrkia",
-                "Georgia": "Georgia", "Georgien": "Georgia",
-                "Armenia": "Armenia", "Armenien": "Armenia",
-                "Azerbaijan": "Aserbajdsjan", "Aserbaidschan": "Aserbajdsjan", "Azerbaijan": "Aserbajdsjan"
-            }
-            
-            for fremmed_land, norsk_land in land_dict.items():
-                if fremmed_land in beskrivelse or fremmed_land in sted_navn:
-                    land = norsk_land
-                    break
-
-            return {
-                "navn": sted_navn,
-                "by": sted_navn,
-                "land": land,
-                "type": "eventyr" if "nature" in beskrivelse.lower() or "park" in beskrivelse.lower() else "kultur",
-                "latitude": round(lat, 4),
-                "longitude": round(lon, 4),
-                "beskrivelse": beskrivelse if len(beskrivelse) > 10 else f"Skjult perle: {sted_navn}.",
-                "tips": "Sjekk Wikivoyage eller lokale medier for detaljer.",
-                "pris": "€"
-            }
-    except Exception:
+    """Henter koordinater, land og sammendrag fra Wikivoyage."""
+    data = hent_artikkel_med_koordinater(sted_navn, pause=0.1)
+    if not data:
         return None
-    return None
+    besk = (data.get("beskrivelse") or "").lower()
+    if "nature" in besk or "park" in besk:
+        data["type"] = "eventyr"
+    return data
 
 
 # --- HOVEDPROSESSERING ---

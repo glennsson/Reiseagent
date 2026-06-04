@@ -165,6 +165,48 @@ button[kind="primary"] {
     border: none !important;
 }
 
+/* Kompakt reiseplan-knapp (nøkkel prefiks plan_ i app.py) */
+div[class*="st-key-plan_"] {
+    align-items: flex-start;
+}
+
+div[class*="st-key-plan_"] [data-testid="stButton"] {
+    width: auto;
+}
+
+div[class*="st-key-plan_"] button {
+    font-size: 0.7rem !important;
+    line-height: 1.2 !important;
+    padding: 0.3rem 0.85rem !important;
+    min-height: 1.65rem !important;
+    height: auto !important;
+    width: auto !important;
+    max-width: 100%;
+    border-radius: 999px !important;
+    border: 1px solid color-mix(in srgb, var(--gemini-blue) 45%, var(--gemini-border)) !important;
+    background: color-mix(in srgb, var(--gemini-surface) 96%, rgba(26, 115, 232, 0.08)) !important;
+    color: var(--gemini-blue) !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.04em !important;
+    text-transform: none !important;
+    box-shadow: 0 1px 4px rgba(26, 115, 232, 0.1) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+div[class*="st-key-plan_"] button:hover {
+    background: color-mix(in srgb, var(--gemini-blue) 12%, var(--gemini-surface)) !important;
+    border-color: var(--gemini-blue) !important;
+    color: var(--gemini-blue) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(26, 115, 232, 0.16) !important;
+    filter: none !important;
+}
+
+div[class*="st-key-plan_"] button:active {
+    transform: translateY(0);
+}
+
 @media (prefers-color-scheme: dark) {
     :root {
         --gemini-bg: #0B0F19;
