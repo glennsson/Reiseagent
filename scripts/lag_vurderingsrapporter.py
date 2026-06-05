@@ -16,7 +16,6 @@ if str(ROOT) not in sys.path:
 from data_store import get_places
 from place_quality import (
     MIN_UNIKHETSGRAD,
-    HOTELL_MAKS_EURO_DOBLELTROM,
     vurder_eksisterende_sted,
 )
 
@@ -86,7 +85,7 @@ def _vurder_med_ai(steder: List[Dict], batch_size: int = 30, retry_unknown: bool
         prompt = (
             "Vurder kvaliteten på hver perle for appen Hemmelige Europa (skjulte, unike steder). "
             f"Gi score 1-10. Status 'behold' hvis stedet er unikt og oppfyller: "
-            f"unikhetsgrad >= {MIN_UNIKHETSGRAD}, hotell kun med dobbeltrom <= {HOTELL_MAKS_EURO_DOBLELTROM} EUR, "
+            f"unikhetsgrad >= {MIN_UNIKHETSGRAD}, "
             "ingen kjeder eller mainstream-turistfeller. Ellers 'vurder sletting'. "
             "Svar KUN gyldig JSON med format: "
             '{"vurderinger":[{"id":"...","score":9,"status":"behold","begrunnelse":"..."}]}.\n\n'
@@ -144,7 +143,7 @@ def _vurder_med_ai(steder: List[Dict], batch_size: int = 30, retry_unknown: bool
             ]
             prompt = (
                 "Vurder kvaliteten på denne perlen for Hemmelige Europa. "
-                f"Status 'behold' kun ved unikhetsgrad >= {MIN_UNIKHETSGRAD} og hotell <= {HOTELL_MAKS_EURO_DOBLELTROM} EUR. "
+                f"Status 'behold' kun ved unikhetsgrad >= {MIN_UNIKHETSGRAD}. "
                 "Svar KUN gyldig JSON med format: "
                 '{"vurderinger":[{"id":"...","score":9,"status":"behold","begrunnelse":"..."}]}.\n\n'
                 f"Kandidat:\n{json.dumps(kandidat_liste, ensure_ascii=False)}"
@@ -191,7 +190,7 @@ def _skriv_rapport(path: str, tittel: str, steder: List[Dict], vurderinger: Dict
     linjer.append(f"{tittel}")
     linjer.append(f"Generert: {datetime.now().isoformat(timespec='seconds')}")
     linjer.append(
-        f"Regler: min. unikhetsgrad {MIN_UNIKHETSGRAD}, hotell maks {HOTELL_MAKS_EURO_DOBLELTROM} € dobbeltrom"
+        f"Regler: min. unikhetsgrad {MIN_UNIKHETSGRAD}"
     )
     linjer.append(f"Antall steder: {len(steder)}")
     linjer.append("")
