@@ -58,6 +58,12 @@ def _er_mainstream_turistdestinasjon(sted) -> bool:
     return bool(checker and checker(sted))
 
 
+def _er_blant_landets_storste_byer(sted) -> bool:
+    """Blant landets fem største byer — ikke helgeby."""
+    checker = getattr(_place_quality, "er_blant_landets_storste_byer", None)
+    return bool(checker and checker(sted))
+
+
 def _sla_sammen_steder_etter_id(*lister):
     """Slår sammen steder; første forekomst av id vinner."""
     by_id = {}
@@ -1323,6 +1329,8 @@ def _normaliser_helgeby_kandidat(rå, omrade=""):
 def _helgeby_passer_kvalitet(kandidat, strict_mode=False):
     if _er_mainstream_turistdestinasjon(kandidat):
         return False
+    if _er_blant_landets_storste_byer(kandidat):
+        return False
     if _er_velbesokt_museum(kandidat):
         return False
     if kandidat.get("saerhetsscore", 0) < MIN_UNIKHETSGRAD:
@@ -1356,6 +1364,7 @@ def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
             "Prefer walkable old towns, local food, nature nearby, festivals or crafts — "
             "places with real character but NOT mass tourism. "
             "NEVER suggest capitals or bucket-list cities (Paris, Rome, Barcelona, Amsterdam, Venice, Prague, etc.). "
+            "NEVER suggest any of a country's 5 largest cities (e.g. in Italy: Rome, Milan, Naples, Turin, Palermo). "
             f"Tailor slightly to traveller interest: {interesse}."
         )
         user_prompt = f"Region: {omrade}. Number of towns: {antall}."
@@ -1371,6 +1380,7 @@ def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
             "Prioriter gåbare gamlebyer, lokal mat, natur i nærheten, håndverk eller festivaler — "
             "steder med sjel, men IKKE masseturisme. "
             "ALDRI foreslå hovedsteder eller bucket-list-byer (Paris, Roma, Barcelona, Amsterdam, Venezia, Praha osv.). "
+            "ALDRI foreslå noen av landets 5 største byer (f.eks. i Italia: Roma, Milano, Napoli, Torino, Palermo). "
             f"Tilpass litt til reiseinteresse: {interesse}."
         )
         user_prompt = f"Region: {omrade}. Antall byer: {antall}."
@@ -1410,6 +1420,7 @@ def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
     nye_nokler = set()
     godkjente = []
     forkastet_mainstream = 0
+    forkastet_storby = 0
     forkastet_score = 0
     forkastet_normalisering = 0
     kandidater_for_geo = []
@@ -1428,6 +1439,8 @@ def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
         if not _helgeby_passer_kvalitet(kandidat, strict_mode):
             if _er_mainstream_turistdestinasjon(kandidat):
                 forkastet_mainstream += 1
+            elif _er_blant_landets_storste_byer(kandidat):
+                forkastet_storby += 1
             else:
                 forkastet_score += 1
             continue
@@ -1466,6 +1479,7 @@ def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
         "foreslaatt": len(rå_liste),
         "godkjent": len(godkjente),
         "forkastet_mainstream": forkastet_mainstream,
+        "forkastet_storby": forkastet_storby,
         "forkastet_score": forkastet_score,
         "forkastet_normalisering": forkastet_normalisering,
         "tid_total_s": round(time.perf_counter() - total_start, 3),
@@ -2784,6 +2798,7 @@ with fane_helgeby:
                 helgeby_rapport.get("foreslaatt", 0),
                 helgeby_rapport.get("godkjent", 0),
                 helgeby_rapport.get("forkastet_mainstream", 0),
+                helgeby_rapport.get("forkastet_storby", 0),
                 helgeby_rapport.get("forkastet_score", 0),
             )
         )

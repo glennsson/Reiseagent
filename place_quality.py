@@ -40,6 +40,7 @@ __all__ = [
     "er_velbesokt_museum",
     "er_velbesøkt_museum",
     "er_mainstream_turistdestinasjon",
+    "er_blant_landets_storste_byer",
     "filtrer_steder_for_app",
     "godkjent_hotel_kandidat",
     "godkjent_restaurant_kandidat",
@@ -57,6 +58,7 @@ __all__ = [
 
 import json
 import re
+import unicodedata
 from typing import Dict, List, Optional, Set, Tuple
 
 import database as _database
@@ -237,6 +239,122 @@ _MAINSTREAM_TURISTBYER = (
     "mallorca",
     "ibiza",
 )
+
+HELGEBY_MAKS_STORBY_RANG = 5
+
+# Rang 1–5 per land (aliaser i hvert tuplenivå). Brukes til helgeby-filter.
+_LAND_TOP_BYER: Dict[str, Tuple[Tuple[str, ...], ...]] = {
+    "norge": (("oslo",), ("bergen",), ("trondheim",), ("stavanger",), ("kristiansand", "drammen")),
+    "sverige": (("stockholm",), ("goteborg", "gothenburg", "göteborg"), ("malmo", "malmö"), ("uppsala",), ("linkoping", "linköping")),
+    "danmark": (("kobenhavn", "copenhagen", "københavn"), ("aarhus", "århus"), ("odense",), ("aalborg",), ("esbjerg",)),
+    "finland": (("helsinki", "helsingfors"), ("espoo", "esbo"), ("tampere",), ("vantaa", "vanda"), ("oulu", "uleåborg")),
+    "island": (("reykjavik", "reykjavík"), ("kopavogur", "kópavogur"), ("hafnarfjordur", "hafnarfjörður"), ("akureyri",), ("reykjanesbaer", "reykjanesbær")),
+    "tyskland": (("berlin",), ("hamburg",), ("munchen", "munich", "münchen"), ("koln", "cologne", "köln"), ("frankfurt", "frankfurt am main")),
+    "frankrike": (("paris",), ("marseille", "marseilles"), ("lyon",), ("toulouse",), ("nice",)),
+    "storbritannia": (("london",), ("birmingham",), ("manchester",), ("glasgow",), ("liverpool",)),
+    "irland": (("dublin",), ("cork",), ("limerick",), ("galway",), ("waterford",)),
+    "nederland": (("amsterdam",), ("rotterdam",), ("den haag", "the hague", "s-gravenhage"), ("utrecht",), ("eindhoven",)),
+    "belgia": (("brussel", "brussels", "bruxelles"), ("antwerpen", "antwerp", "anvers"), ("gent", "ghent"), ("charleroi",), ("liege", "liège")),
+    "luxembourg": (("luxembourg", "luxembourg city", "luxembourg by"), ("esch-sur-alzette", "esch sur alzette"), ("differdange",), ("dudelange",), ("petange", "pétange")),
+    "spania": (("madrid",), ("barcelona",), ("valencia", "valència"), ("sevilla", "seville"), ("zaragoza", "saragossa")),
+    "portugal": (("lisboa", "lisbon"), ("porto", "oporto"), ("braga",), ("coimbra",), ("funchal",)),
+    "italia": (("roma", "rome"), ("milano", "milan"), ("napoli", "naples"), ("torino", "turin"), ("palermo",)),
+    "hellas": (("athen", "athens", "athina"), ("thessaloniki", "thessalonica", "salonica"), ("patras", "patra"), ("heraklion", "iraklio"), ("larissa",)),
+    "polen": (("warszawa", "warsaw"), ("krakow", "kraków", "cracow"), ("lodz", "łódź"), ("wroclaw", "wrocław"), ("poznan", "poznań")),
+    "tsjekkia": (("praha", "prague"), ("brno",), ("ostrava",), ("plzen", "plzeň"), ("liberec",)),
+    "slovakia": (("bratislava",), ("kosice", "košice"), ("presov", "prešov"), ("zilina", "žilina"), ("nitra",)),
+    "ungarn": (("budapest",), ("debrecen",), ("szeged",), ("miskolc",), ("pecs", "pécs")),
+    "osterrike": (("wien", "vienna"), ("graz",), ("linz",), ("salzburg",), ("innsbruck",)),
+    "sveits": (("zurich", "zürich"), ("geneve", "genève", "geneva"), ("basel", "bâle"), ("bern", "berne"), ("lausanne",)),
+    "romania": (("bucuresti", "bucharest"), ("cluj-napoca", "cluj"), ("timisoara", "timișoara"), ("iasi", "iași"), ("constanta", "constanța")),
+    "bulgaria": (("sofia",), ("plovdiv",), ("varna",), ("burgas",), ("ruse", "rousse")),
+    "kroatia": (("zagreb",), ("split",), ("rijeka",), ("osijek",), ("zadar",)),
+    "serbia": (("beograd", "belgrade"), ("novi sad",), ("nis", "niš"), ("kragujevac",), ("subotica",)),
+    "slovenia": (("ljubljana",), ("maribor",), ("celje",), ("kranj",), ("koper",)),
+    "bosnia": (("sarajevo",), ("banja luka",), ("tuzla",), ("zenica",), ("mostar",)),
+    "nord-makedonia": (("skopje",), ("bitola",), ("kumanovo",), ("prilep",), ("tetovo",)),
+    "albania": (("tirana", "tiranë"), ("durres", "durrës"), ("vlore", "vlorë"), ("shkoder", "shkodër"), ("fier",)),
+    "montenegro": (("podgorica",), ("niksic", "nikšić"), ("herceg novi",), ("pljevlja",), ("bar",)),
+    "estland": (("tallinn",), ("tartu",), ("narva",), ("parnu", "pärnu"), ("kohtla-jarve", "kohtla-järve")),
+    "latvia": (("riga",), ("daugavpils",), ("liepaja", "liepāja"), ("jelgava",), ("jurmala", "jūrmala")),
+    "litauen": (("vilnius",), ("kaunas",), ("klaipeda", "klaipėda"), ("siauliai", "šiauliai"), ("panevezys", "panevėžys")),
+    "ukraina": (("kyiv", "kiev"), ("kharkiv", "kharkov"), ("odesa", "odessa"), ("dnipro", "dnipropetrovsk"), ("lviv", "lvov", "lemberg")),
+    "hviterussland": (("minsk",), ("homiel", "gomel"), ("mahilyow", "mogilev"), ("vitebsk",), ("hrodna", "grodno")),
+    "moldova": (("chisinau", "chișinău"), ("tiraspol",), ("balti", "bălți"), ("bender", "tighina"), ("cahul",)),
+    "malta": (("birkirkara",), ("mosta",), ("qormi",), ("zabbar", "żabbar"), ("sliema",)),
+    "kypros": (("nicosia", "lefkosia"), ("limassol", "lemesos"), ("larnaca", "larnaka"), ("paphos", "pafos"), ("famagusta", "gazimagusa")),
+    "tyrkia": (("istanbul", "constantinople"), ("ankara",), ("izmir", "smyrna"), ("bursa",), ("antalya",)),
+    "georgia": (("tbilisi", "tiflis"), ("batumi",), ("kutaisi",), ("rustavi",), ("gori",)),
+}
+
+_LAND_NAVN_ALIASES: Dict[str, str] = {
+    "norge": "norge", "norway": "norge", "no": "norge",
+    "sverige": "sverige", "sweden": "sverige", "se": "sverige",
+    "danmark": "danmark", "denmark": "danmark", "dk": "danmark",
+    "finland": "finland", "suomi": "finland", "fi": "finland",
+    "island": "island", "iceland": "island", "is": "island",
+    "tyskland": "tyskland", "germany": "tyskland", "deutschland": "tyskland", "de": "tyskland",
+    "frankrike": "frankrike", "france": "frankrike", "fr": "frankrike",
+    "storbritannia": "storbritannia", "united kingdom": "storbritannia", "uk": "storbritannia",
+    "great britain": "storbritannia", "england": "storbritannia", "scotland": "storbritannia", "wales": "storbritannia",
+    "irland": "irland", "ireland": "irland", "eire": "irland", "ie": "irland",
+    "nederland": "nederland", "netherlands": "nederland", "holland": "nederland", "nl": "nederland",
+    "belgia": "belgia", "belgium": "belgia", "be": "belgia",
+    "luxembourg": "luxembourg", "luxemburg": "luxembourg", "lu": "luxembourg",
+    "spania": "spania", "spain": "spania", "espana": "spania", "españa": "spania", "es": "spania",
+    "portugal": "portugal", "pt": "portugal",
+    "italia": "italia", "italy": "italia", "it": "italia",
+    "hellas": "hellas", "greece": "hellas", "gr": "hellas",
+    "polen": "polen", "poland": "polen", "polska": "polen", "pl": "polen",
+    "tsjekkia": "tsjekkia", "czech republic": "tsjekkia", "czechia": "tsjekkia", "cz": "tsjekkia",
+    "slovakia": "slovakia", "slovak republic": "slovakia", "slovensko": "slovakia", "sk": "slovakia",
+    "ungarn": "ungarn", "hungary": "ungarn", "magyarorszag": "ungarn", "hu": "ungarn",
+    "osterrike": "osterrike", "østerrike": "osterrike", "austria": "osterrike", "osterreich": "osterrike", "österreich": "osterrike", "at": "osterrike",
+    "sveits": "sveits", "switzerland": "sveits", "schweiz": "sveits", "suisse": "sveits", "ch": "sveits",
+    "romania": "romania", "românia": "romania", "ro": "romania",
+    "bulgaria": "bulgaria", "bg": "bulgaria",
+    "kroatia": "kroatia", "croatia": "kroatia", "hrvatska": "kroatia", "hr": "kroatia",
+    "serbia": "serbia", "srbija": "serbia", "rs": "serbia",
+    "slovenia": "slovenia", "slovenija": "slovenia", "si": "slovenia",
+    "bosnia": "bosnia", "bosnia and herzegovina": "bosnia", "bosna i hercegovina": "bosnia", "ba": "bosnia",
+    "nord-makedonia": "nord-makedonia", "north macedonia": "nord-makedonia", "macedonia": "nord-makedonia", "mk": "nord-makedonia",
+    "albania": "albania", "shqiperia": "albania", "al": "albania",
+    "montenegro": "montenegro", "crna gora": "montenegro", "me": "montenegro",
+    "estland": "estland", "estonia": "estland", "eesti": "estland", "ee": "estland",
+    "latvia": "latvia", "latvija": "latvia", "lv": "latvia",
+    "litauen": "litauen", "lithuania": "litauen", "lietuva": "litauen", "lt": "litauen",
+    "ukraina": "ukraina", "ukraine": "ukraina", "ua": "ukraina",
+    "hviterussland": "hviterussland", "belarus": "hviterussland", "by": "hviterussland",
+    "moldova": "moldova", "md": "moldova",
+    "malta": "malta", "mt": "malta",
+    "kypros": "kypros", "cyprus": "kypros", "cy": "kypros",
+    "tyrkia": "tyrkia", "turkey": "tyrkia", "turkiye": "tyrkia", "türkiye": "tyrkia", "tr": "tyrkia",
+    "georgia": "georgia", "sakartvelo": "georgia", "ge": "georgia",
+}
+
+_LAND_TOP_BYER_NORMALISERT: Dict[str, Tuple[Set[str], ...]] = {}
+
+
+def _normaliser_sted_navn(tekst: str) -> str:
+    t = (tekst or "").strip().lower()
+    t = unicodedata.normalize("NFKD", t)
+    t = "".join(c for c in t if not unicodedata.combining(c))
+    t = re.sub(r"[^\w\s'-]", "", t, flags=re.UNICODE)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def _normaliser_land_navn(land: str) -> str:
+    return _LAND_NAVN_ALIASES.get(_normaliser_sted_navn(land), _normaliser_sted_navn(land))
+
+
+def _hent_land_top_byer_normalisert(land_key: str) -> Tuple[Set[str], ...]:
+    if land_key not in _LAND_TOP_BYER_NORMALISERT:
+        rader = []
+        for rang in _LAND_TOP_BYER.get(land_key, ()):
+            rader.append({_normaliser_sted_navn(alias) for alias in rang})
+        _LAND_TOP_BYER_NORMALISERT[land_key] = tuple(rader)
+    return _LAND_TOP_BYER_NORMALISERT[land_key]
+
 
 _TURISTBY_SIGNAL = (
     "hovedstad",
@@ -485,6 +603,20 @@ def er_mainstream_turistdestinasjon(sted: Dict) -> bool:
         signal in tekst for signal in _TURISTBY_SIGNAL
     ):
         return True
+    return False
+
+
+def er_blant_landets_storste_byer(sted: Dict, *, antall: int = HELGEBY_MAKS_STORBY_RANG) -> bool:
+    """True hvis byen er blant landets N største (brukes for helgeby)."""
+    land_key = _normaliser_land_navn(sted.get("land") or "")
+    if not land_key or land_key not in _LAND_TOP_BYER:
+        return False
+    by = _normaliser_sted_navn(sted.get("by") or sted.get("navn") or "")
+    if not by:
+        return False
+    for rang_set in _hent_land_top_byer_normalisert(land_key)[: max(1, antall)]:
+        if by in rang_set:
+            return True
     return False
 
 
