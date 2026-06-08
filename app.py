@@ -43,6 +43,16 @@ from place_quality import (
     score_saerhetstekst as _score_saerhetstekst,
 )
 
+# Cron-job: ?ping_cron vekker databasen uten å laste hele UI-en
+if "ping_cron" in st.query_params:
+    try:
+        with get_connection() as conn:
+            conn.execute("SELECT 1")
+        st.write("Database våken!")
+    except Exception as e:
+        st.write(f"Feil ved vekking: {e}")
+    st.stop()
+
 
 def _er_velbesokt_museum(sted) -> bool:
     """Velbesøkt museum-sjekk via place_quality (unngår navngitt import)."""
