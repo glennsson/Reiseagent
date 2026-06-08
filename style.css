@@ -12,8 +12,8 @@
     --greige-accent: #7A6E62;
     --greige-accent-strong: #564E47;
     --greige-highlight: #9A8B7C;
-    --greige-radius: 18px;
-    --greige-shadow: 0 10px 28px rgba(42, 38, 34, 0.06);
+    --greige-radius: 10px;
+    --greige-shadow: 0 1px 3px rgba(42, 38, 34, 0.05);
 }
 
 html, body, [class*="css"], .stMarkdown, [data-testid="stAppViewContainer"] {
@@ -73,7 +73,6 @@ small,
 }
 
 [data-testid="stMetric"],
-.travel-card,
 [data-testid="stExpander"] {
     background: color-mix(in srgb, var(--greige-surface) 96%, transparent) !important;
     border: 1px solid var(--greige-border) !important;
@@ -104,28 +103,85 @@ small,
 }
 
 .travel-card {
-    min-height: 205px;
-    padding: 1.05rem;
-    margin-bottom: 0.75rem;
+    min-height: 0;
+    padding: 0.5rem 0.6rem;
+    margin: 0.3rem 0 0.4rem;
+    background: var(--greige-surface) !important;
+    border: 1px solid var(--greige-border) !important;
+    border-radius: var(--greige-radius) !important;
+    box-shadow: none;
 }
 
-.travel-card h3 {
-    margin-top: 0;
-    font-size: 1.05rem;
+.travel-card-title {
+    margin: 0 0 0.15rem;
+    font-size: 0.86rem !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
     color: var(--greige-text) !important;
 }
 
-.travel-card p,
-.travel-card span {
+.travel-card-meta {
+    margin: 0 0 0.3rem;
+    font-size: 0.72rem !important;
+    font-weight: 500 !important;
+    line-height: 1.3 !important;
+    color: var(--greige-muted) !important;
+}
+
+.travel-card-desc {
+    margin: 0;
+    font-size: 0.78rem !important;
+    line-height: 1.42 !important;
     color: var(--greige-text-secondary) !important;
 }
 
-[data-testid="stImage"] img {
-    border-radius: 14px;
+.travel-tip,
+.travel-card-time,
+.travel-card-price {
+    margin: 0.3rem 0 0;
+    font-size: 0.72rem !important;
+    line-height: 1.35 !important;
+    color: var(--greige-muted) !important;
+}
+
+.travel-card-price {
+    color: var(--greige-accent-strong) !important;
+    font-weight: 600 !important;
+}
+
+[data-testid="column"] [data-testid="stVerticalBlock"] {
+    gap: 0.2rem !important;
+}
+
+[data-testid="column"] [data-testid="stImage"] {
+    margin-bottom: 0.15rem;
+}
+
+[data-testid="column"] [data-testid="stImage"] img,
+[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stImage"] img {
+    border-radius: 8px;
     object-fit: cover;
-    max-height: 220px;
+    max-height: 96px;
     width: 100%;
-    box-shadow: 0 6px 18px rgba(42, 38, 34, 0.12);
+    box-shadow: none;
+}
+
+[data-testid="column"] [data-testid="stCaptionContainer"],
+[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stCaptionContainer"] {
+    margin-top: 0.1rem !important;
+}
+
+[data-testid="column"] [data-testid="stCaptionContainer"] p,
+[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stCaptionContainer"] p {
+    font-size: 0.68rem !important;
+    line-height: 1.25 !important;
+}
+
+[data-testid="stVerticalBlockBorderWrapper"] {
+    padding: 0.45rem 0.55rem !important;
+    border-radius: var(--greige-radius) !important;
+    border-color: var(--greige-border) !important;
+    box-shadow: none !important;
 }
 
 .stTabs [data-baseweb="tab-list"] {
@@ -133,20 +189,21 @@ small,
     top: 0.25rem;
     z-index: 40;
     display: flex;
-    gap: 0.45rem;
+    gap: 0.3rem;
     overflow-x: auto;
-    padding: 0.45rem;
-    border-radius: 16px;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    padding: 0.3rem;
+    border-radius: 10px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     background: color-mix(in srgb, var(--greige-surface) 78%, transparent) !important;
     border: 1px solid color-mix(in srgb, var(--greige-border) 85%, transparent);
-    box-shadow: 0 10px 26px rgba(42, 38, 34, 0.08);
+    box-shadow: none;
 }
 
 .stTabs [data-baseweb="tab"] {
-    border-radius: 12px;
-    padding: 0.5rem 0.95rem;
+    border-radius: 8px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.82rem !important;
     background: color-mix(in srgb, var(--greige-surface-2) 80%, transparent);
     border: 1px solid color-mix(in srgb, var(--greige-border) 80%, transparent);
     color: var(--greige-text-secondary) !important;
@@ -184,7 +241,10 @@ small,
 .stDownloadButton > button,
 .stFormSubmitButton > button,
 .stLinkButton > a {
-    border-radius: 16px !important;
+    border-radius: 10px !important;
+    font-size: 0.82rem !important;
+    padding: 0.35rem 0.75rem !important;
+    min-height: 2rem !important;
     border: 1px solid color-mix(in srgb, var(--greige-surface) 65%, var(--greige-border)) !important;
     background: linear-gradient(
         135deg,
@@ -193,19 +253,19 @@ small,
     ) !important;
     color: var(--greige-text) !important;
     font-weight: 600 !important;
-    box-shadow: 0 8px 22px rgba(42, 38, 34, 0.10) !important;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+    box-shadow: none !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .stButton > button:hover,
 .stDownloadButton > button:hover,
 .stFormSubmitButton > button:hover,
 .stLinkButton > a:hover {
-    transform: translateY(-1px);
-    filter: brightness(1.02);
-    box-shadow: 0 12px 26px rgba(42, 38, 34, 0.14) !important;
+    transform: none;
+    filter: none;
+    box-shadow: none !important;
 }
 
 button[kind="primary"] {
@@ -331,8 +391,13 @@ div[class*="st-key-plan_"] button:active {
         font-size: 2rem !important;
     }
 
-    .travel-card {
-        min-height: auto;
+    [data-testid="column"] [data-testid="stImage"] img,
+    [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stImage"] img {
+        max-height: 88px;
+    }
+
+    .travel-card-desc {
+        font-size: 0.76rem !important;
     }
 
     [data-testid="stCaptionContainer"],

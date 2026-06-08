@@ -2687,6 +2687,34 @@ def sted_tittel_med_profil(sted, standard_emoji):
     return f"{emoji_del}{navn}".strip()
 
 
+def _render_travel_card_html(sted, tittel, *, pris_tekst=None):
+    """Kompakt HTML-boks for stedsbeskrivelse i perle/mat/overnatting-lister."""
+    meta = f"📍 {html.escape(sted.get('by', ''))}, {html.escape(sted.get('land', ''))}"
+    type_vis = vis_sted_type(sted)
+    if type_vis:
+        meta += f" · {html.escape(type_vis)}"
+
+    extras = []
+    if pris_tekst:
+        extras.append(f'<p class="travel-card-price">{html.escape(pris_tekst)}</p>')
+    if sted.get("tips"):
+        extras.append(f'<p class="travel-tip">💡 {html.escape(sted["tips"])}</p>')
+    if sted.get("beste_tid"):
+        extras.append(
+            f'<p class="travel-card-time">{html.escape(tr("perler_beste_tid").format(sted["beste_tid"]))}</p>'
+        )
+    extra_html = "\n".join(extras)
+
+    return f"""
+<div class="travel-card">
+    <h3 class="travel-card-title">{html.escape(tittel)}</h3>
+    <p class="travel-card-meta">{meta}</p>
+    <p class="travel-card-desc">{html.escape(sted.get("beskrivelse") or "")}</p>
+    {extra_html}
+</div>
+"""
+
+
 # ========================================
 # RAG: GEO + PROFIL (REISECHAT)
 # ========================================
@@ -3085,19 +3113,9 @@ with fane0:
                         with cols[j]:
                             vis_sted_foto(p, key_suffix=f"perle_{p['id']}")
                             st.markdown(
-                                f"""
-                            <div class="travel-card">
-                                <h3>{perle_tittel}</h3>
-                                <p><b>📍 {p["by"]}, {p["land"]}</b> • <i>{vis_sted_type(p)}</i></p>
-                                <p>{p["beskrivelse"]}</p>
-                            </div>
-                            """,
+                                _render_travel_card_html(p, perle_tittel),
                                 unsafe_allow_html=True,
                             )
-                            if p.get("tips"):
-                                st.info(f"💡 {p['tips']}")
-                            if p.get("beste_tid"):
-                                st.caption(tr("perler_beste_tid").format(p["beste_tid"]))
                             view_key = (
                                 "mat"
                                 if p.get("source_type") == "restaurant"
@@ -3106,7 +3124,6 @@ with fane0:
                                 else "perle"
                             )
                             render_reiseplan_knapp(p, view_key, index=i + j)
-                            st.write("<br>", unsafe_allow_html=True)
         else:
             st.info(T["perler_ingen_treff"])
 
@@ -3300,18 +3317,14 @@ with fane1:
                     with cols[j]:
                         vis_sted_foto(s, key_suffix=f"mat_{s['id']}")
                         st.markdown(
-                            f"""
-                        <div class="travel-card">
-                            <h3>{mat_tittel}</h3>
-                            <p><b>📍 {s["by"]}, {s["land"]}</b> • <i>{vis_sted_type(s)}</i></p>
-                            <p>{s["beskrivelse"]}</p>
-                        </div>
-                        """,
+                            _render_travel_card_html(
+                                s,
+                                mat_tittel,
+                                pris_tekst=f"{T['mat_pris']} {s['pris']}",
+                            ),
                             unsafe_allow_html=True,
                         )
-                        st.success(f"{T['mat_pris']} {s['pris']}")
                         render_reiseplan_knapp(s, "mat", index=i + j)
-                        st.write("<br>", unsafe_allow_html=True)
     else:
         st.info(T["mat_ingen_treff"])
 
@@ -3381,22 +3394,14 @@ with fane2:
                     with cols[j]:
                         vis_sted_foto(s, key_suffix=f"hotell_{s['id']}")
                         st.markdown(
-                            f"""
-                        <div class="travel-card">
-                            <h3>{hotell_tittel}</h3>
-                            <p><b>📍 {s["by"]}, {s["land"]}</b> • <i>{vis_sted_type(s)}</i></p>
-                            <p>{s["beskrivelse"]}</p>
-                        </div>
-                        """,
+                            _render_travel_card_html(
+                                s,
+                                hotell_tittel,
+                                pris_tekst=f"{tr('hotell_pris')} {s.get('pris', '€€')}",
+                            ),
                             unsafe_allow_html=True,
                         )
-                        if s.get("tips"):
-                            st.info(f"💡 {s['tips']}")
-                        if s.get("beste_tid"):
-                            st.caption(tr("perler_beste_tid").format(s["beste_tid"]))
-                        st.success(f"{tr('hotell_pris')} {s.get('pris', '€€')}")
                         render_reiseplan_knapp(s, "hotell", index=i + j)
-                        st.write("<br>", unsafe_allow_html=True)
     else:
         st.info(tr("hotell_ingen_treff"))
 
@@ -3852,9 +3857,10 @@ with fane4:
         for item in itinerary_items:
             with st.container(border=True):
                 vis_sted_foto(item, key_suffix=f"plan_{item['id']}")
-                st.markdown(f"### {item['navn']}")
-                st.caption(f"{item['by']}, {item['land']} • {item['type']}")
-                st.write(item["beskrivelse"])
+                st.markdown(
+                    _render_travel_card_html(item, item.get("navn", "")),
+                    unsafe_allow_html=True,
+                )
                 if st.button(
                     tr("reiseplan_fjern"),
                     key=f"reiseplan_remove_{item['id']}",
