@@ -1,19 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-    --greige-bg: #E8E4DE;
-    --greige-bg-soft: #F0ECE7;
-    --greige-surface: #FAF7F3;
-    --greige-surface-2: #E2DDD6;
-    --greige-text: #25211D;
-    --greige-text-secondary: #3F3A35;
-    --greige-muted: #57524C;
-    --greige-border: #C5BEB5;
-    --greige-accent: #6B5F54;
-    --greige-accent-strong: #4F4640;
-    --greige-highlight: #8A7B6C;
+    --greige-bg: #F5F2EE;
+    --greige-bg-soft: #FCFAF7;
+    --greige-surface: #FFFFFF;
+    --greige-surface-2: #F0ECE7;
+    --greige-text: #2A2622;
+    --greige-text-secondary: #45403A;
+    --greige-muted: #5E5852;
+    --greige-border: #E3DDD6;
+    --greige-accent: #7A6E62;
+    --greige-accent-strong: #564E47;
+    --greige-highlight: #9A8B7C;
     --greige-radius: 18px;
-    --greige-shadow: 0 12px 34px rgba(42, 38, 34, 0.10);
+    --greige-shadow: 0 10px 28px rgba(42, 38, 34, 0.06);
 }
 
 html, body, [class*="css"], .stMarkdown, [data-testid="stAppViewContainer"] {
@@ -24,9 +24,9 @@ html, body, [class*="css"], .stMarkdown, [data-testid="stAppViewContainer"] {
 
 .stApp {
     background:
-        radial-gradient(circle at 12% 0%, rgba(138, 123, 108, 0.14), transparent 26rem),
-        radial-gradient(circle at 88% 4%, rgba(107, 95, 84, 0.10), transparent 28rem),
-        linear-gradient(180deg, var(--greige-bg-soft) 0%, var(--greige-bg) 42%, #E3DFDB 100%);
+        radial-gradient(circle at 12% 0%, rgba(154, 139, 124, 0.08), transparent 28rem),
+        radial-gradient(circle at 88% 4%, rgba(122, 110, 98, 0.06), transparent 30rem),
+        linear-gradient(180deg, var(--greige-bg-soft) 0%, var(--greige-bg) 55%, #F0ECE7 100%);
     color: var(--greige-text);
 }
 
@@ -299,41 +299,25 @@ div[class*="st-key-plan_"] button:active {
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --greige-bg: #1A1816;
-        --greige-bg-soft: #211E1B;
-        --greige-surface: #2A2724;
-        --greige-surface-2: #35312D;
-        --greige-text: #F3EFEA;
-        --greige-text-secondary: #DDD7D0;
-        --greige-muted: #C4BCB3;
-        --greige-border: #4A4540;
-        --greige-accent: #B8A99A;
-        --greige-accent-strong: #E2D8CE;
-        --greige-highlight: #9F8F80;
-        --greige-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+        --greige-bg: #F0ECE7;
+        --greige-bg-soft: #FAF8F5;
+        --greige-surface: #FFFFFF;
+        --greige-surface-2: #EDE8E2;
+        --greige-text: #2A2622;
+        --greige-text-secondary: #45403A;
+        --greige-muted: #5E5852;
+        --greige-border: #DDD7D0;
+        --greige-accent: #7A6E62;
+        --greige-accent-strong: #564E47;
+        --greige-highlight: #9A8B7C;
+        --greige-shadow: 0 10px 28px rgba(42, 38, 34, 0.07);
     }
 
     .stApp {
         background:
-            radial-gradient(circle at 12% 0%, rgba(159, 143, 128, 0.12), transparent 26rem),
-            radial-gradient(circle at 88% 4%, rgba(184, 169, 154, 0.08), transparent 28rem),
+            radial-gradient(circle at 12% 0%, rgba(154, 139, 124, 0.07), transparent 28rem),
+            radial-gradient(circle at 88% 4%, rgba(122, 110, 98, 0.05), transparent 30rem),
             linear-gradient(180deg, var(--greige-bg-soft) 0%, var(--greige-bg) 100%);
-    }
-
-    .stButton > button,
-    .stDownloadButton > button,
-    .stFormSubmitButton > button,
-    .stLinkButton > a {
-        border-color: color-mix(in srgb, var(--greige-border) 85%, #FFFFFF 15%) !important;
-        background: linear-gradient(
-            135deg,
-            color-mix(in srgb, var(--greige-surface) 86%, rgba(184, 169, 154, 0.16)),
-            color-mix(in srgb, var(--greige-surface-2) 78%, rgba(159, 143, 128, 0.12))
-        ) !important;
-    }
-
-    button[kind="primary"] {
-        color: #1A1816 !important;
     }
 }
 
