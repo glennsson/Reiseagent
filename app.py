@@ -3563,13 +3563,13 @@ with fane3:
         <html>
         <head>
             <style>
-                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; color: #333; line-height: 1.6; }
-                .header { text-align: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 10px; margin-bottom: 30px; }
-                .message-box { margin-bottom: 20px; padding: 15px; border-radius: 6px; }
-                .user { background-color: #F3F4F6; border-left: 4px solid #9CA3AF; }
-                .assistant { background-color: #EFF6FF; border-left: 4px solid #3B82F6; }
-                .sender-name { font-weight: bold; font-size: 0.9em; color: #1E3A8A; margin-bottom: 5px; }
-                .map-hint { font-size: 0.85em; color: #6B7280; font-style: italic; margin-top: 10px; }
+                body { font-family: 'Inter', 'Segoe UI', sans-serif; padding: 30px; color: #25211D; background: #E8E4DE; line-height: 1.6; }
+                .header { text-align: center; border-bottom: 2px solid #6B5F54; padding-bottom: 10px; margin-bottom: 30px; }
+                .message-box { margin-bottom: 20px; padding: 15px; border-radius: 10px; }
+                .user { background-color: #FAF7F3; border-left: 4px solid #8A7B6C; color: #3F3A35; }
+                .assistant { background-color: #F0ECE7; border-left: 4px solid #6B5F54; color: #3F3A35; }
+                .sender-name { font-weight: 700; font-size: 0.9em; color: #4F4640; margin-bottom: 5px; }
+                .map-hint { font-size: 0.85em; color: #57524C; font-style: italic; margin-top: 10px; }
             </style>
         </head>
         <body>
