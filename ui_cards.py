@@ -178,17 +178,26 @@ def render_travel_card_html(sted, tittel, tr, vis_sted_type_fn, pris_tekst=None)
     kant_farge = kart_markor_farge(sted)
     badge = _unikhet_badge_html(sted, tr)
 
-    return f"""
-<div class="travel-card" style="border-left: 4px solid {html.escape(kant_farge)};">
-    <div class="travel-card-head">
-        <h3 class="travel-card-title">{html.escape(tittel)}</h3>
-        {badge}
-    </div>
-    <p class="travel-card-meta">{meta}</p>
-    <p class="travel-card-desc">{html.escape(sted.get("beskrivelse", ""))}</p>
-    {extra_html}
+    return f"""<div class="travel-card" style="border-left: 4px solid {html.escape(kant_farge)};">
+<div class="travel-card-head">
+<h3 class="travel-card-title">{html.escape(tittel)}</h3>
+{badge}
 </div>
-"""
+<p class="travel-card-meta">{meta}</p>
+<p class="travel-card-desc">{html.escape(sted.get("beskrivelse", ""))}</p>
+{extra_html}
+</div>"""
+
+
+def vis_travel_card_html(html_innhold):
+    """Viser travel-card — st.html unngår rå HTML-tekst i border-containere."""
+    tekst = (html_innhold or "").strip()
+    if not tekst:
+        return
+    if hasattr(st, "html"):
+        st.html(tekst)
+    else:
+        st.markdown(tekst, unsafe_allow_html=True)
 
 
 def render_hero_html(antall_oppdagelser, antall_land, tr):

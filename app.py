@@ -43,6 +43,7 @@ from ui_cards import (
     render_travel_card_html as _ui_render_travel_card_html,
     vis_sted_foto as _ui_vis_sted_foto,
     vis_tom_tilstand,
+    vis_travel_card_html,
 )
 from kart_utils import (
     filtrer_data,
@@ -1054,27 +1055,23 @@ def render_chat_agent_perle_handlinger(kandidat, key_suffix, chat_tekst=""):
     visning = _berik_kandidat_fra_db(dict(kandidat))
     if not visning.get("id"):
         visning["id"] = visning.get("agent_id", f"chat_{key_suffix}")
-    with st.container(border=True):
-        st.caption(_chat_agent_oppdaget_tekst(kandidat))
-        vis_sted_foto(visning, key_suffix=f"chat_{key_suffix}", autoload=True)
-        chat_tittel = sted_tittel_med_profil(visning, _sted_emoji(visning))
-        st.markdown(
-            _render_travel_card_html(visning, chat_tittel),
-            unsafe_allow_html=True,
-        )
-        col_plan, col_db = st.columns([1, 1])
-        with col_plan:
-            render_reiseplan_knapp_agent(kandidat, f"chat_{key_suffix}")
-        with col_db:
-            if st.button(
-                lagre_knapp,
-                key=f"chat_save_db_{key_suffix}",
-                use_container_width=True,
-            ):
-                lagret = lagre_agent_perle_i_db(kandidat)
-                _legg_lagret_sted_i_lokale_lister(lagret)
-                st.toast(lagre_toast)
-                st.rerun()
+    st.caption(_chat_agent_oppdaget_tekst(kandidat))
+    vis_sted_foto(visning, key_suffix=f"chat_{key_suffix}", autoload=True)
+    chat_tittel = sted_tittel_med_profil(visning, _sted_emoji(visning))
+    _vis_travel_card(visning, chat_tittel)
+    col_plan, col_db = st.columns([1, 1])
+    with col_plan:
+        render_reiseplan_knapp_agent(kandidat, f"chat_{key_suffix}")
+    with col_db:
+        if st.button(
+            lagre_knapp,
+            key=f"chat_save_db_{key_suffix}",
+            use_container_width=True,
+        ):
+            lagret = lagre_agent_perle_i_db(kandidat)
+            _legg_lagret_sted_i_lokale_lister(lagret)
+            st.toast(lagre_toast)
+            st.rerun()
 
 
 def lagre_agent_perle_i_db(kandidat):
@@ -2345,6 +2342,10 @@ def _render_travel_card_html(sted, tittel, *, pris_tekst=None):
     )
 
 
+def _vis_travel_card(sted, tittel, *, pris_tekst=None):
+    vis_travel_card_html(_render_travel_card_html(sted, tittel, pris_tekst=pris_tekst))
+
+
 # ========================================
 # RAG: GEO + PROFIL (REISECHAT)
 # ========================================
@@ -2554,10 +2555,7 @@ with fane0:
         with st.container(border=True):
             tilfeldig_tittel = sted_tittel_med_profil(tilfeldig_sted, _sted_emoji(tilfeldig_sted))
             vis_sted_foto(tilfeldig_sted, key_suffix=f"tilfeldig_{tilfeldig_sted['id']}")
-            st.markdown(
-                _render_travel_card_html(tilfeldig_sted, tilfeldig_tittel),
-                unsafe_allow_html=True,
-            )
+            _vis_travel_card(tilfeldig_sted, tilfeldig_tittel)
             tilfeldig_view = (
                 "mat"
                 if tilfeldig_sted.get("source_type") == "restaurant"
@@ -2751,10 +2749,7 @@ with fane0:
                         key_suffix=f"radar_valgt_{valgt_perle.get('id', 'x')}",
                         autoload=True,
                     )
-                    st.markdown(
-                        _render_travel_card_html(valgt_perle, valgt_tittel),
-                        unsafe_allow_html=True,
-                    )
+                    _vis_travel_card(valgt_perle, valgt_tittel)
                     if valgt_treff["avstand"] > 0:
                         st.caption(f"{valgt_treff['avstand']} km {T['radar_unna']}")
                     valgt_view = (
@@ -2856,10 +2851,7 @@ with fane0:
                         perle_tittel = sted_tittel_med_profil(p, _sted_emoji(p))
                         with cols[j]:
                             vis_sted_foto(p, key_suffix=f"perle_{p['id']}")
-                            st.markdown(
-                                _render_travel_card_html(p, perle_tittel),
-                                unsafe_allow_html=True,
-                            )
+                            _vis_travel_card(p, perle_tittel)
                             view_key = (
                                 "mat"
                                 if p.get("source_type") == "restaurant"
@@ -2914,7 +2906,7 @@ with fane_ki:
             chat_lagre_tekster=_chat_lagre_tekster,
             vis_sted_foto=vis_sted_foto,
             berik_kandidat_fra_db=_berik_kandidat_fra_db,
-            render_travel_card_html=_render_travel_card_html,
+            vis_travel_card=_vis_travel_card,
             sted_tittel_fn=sted_tittel_med_profil,
             sted_emoji_fn=_sted_emoji,
         )
@@ -2998,10 +2990,7 @@ with fane_ki:
                         autoload=True,
                     )
                     helge_tittel = f"🌆 {kandidat['by']}"
-                    st.markdown(
-                        _render_travel_card_html(vis_sted, helge_tittel),
-                        unsafe_allow_html=True,
-                    )
+                    _vis_travel_card(vis_sted, helge_tittel)
                     if kandidat.get("hvorfor_helg"):
                         st.markdown(
                             f"**{tr('helgeby_hvorfor')}** {kandidat['hvorfor_helg']}"
@@ -3109,13 +3098,10 @@ with fane1:
                     mat_tittel = sted_tittel_med_profil(s, "🍽️")
                     with cols[j]:
                         vis_sted_foto(s, key_suffix=f"mat_{s['id']}")
-                        st.markdown(
-                            _render_travel_card_html(
-                                s,
-                                mat_tittel,
-                                pris_tekst=f"{T['mat_pris']} {s['pris']}",
-                            ),
-                            unsafe_allow_html=True,
+                        _vis_travel_card(
+                            s,
+                            mat_tittel,
+                            pris_tekst=f"{T['mat_pris']} {s['pris']}",
                         )
                         render_reiseplan_knapp(s, "mat", index=i + j)
                         render_affiliate_lenker(s, "mat", index=i + j)
@@ -3184,13 +3170,10 @@ with fane2:
                     hotell_tittel = sted_tittel_med_profil(s, "🛏️")
                     with cols[j]:
                         vis_sted_foto(s, key_suffix=f"hotell_{s['id']}")
-                        st.markdown(
-                            _render_travel_card_html(
-                                s,
-                                hotell_tittel,
-                                pris_tekst=f"{tr('hotell_pris')} {s.get('pris', '€€')}",
-                            ),
-                            unsafe_allow_html=True,
+                        _vis_travel_card(
+                            s,
+                            hotell_tittel,
+                            pris_tekst=f"{tr('hotell_pris')} {s.get('pris', '€€')}",
                         )
                         render_reiseplan_knapp(s, "hotell", index=i + j)
                         render_affiliate_lenker(s, "hotell", index=i + j)
@@ -3475,10 +3458,7 @@ with fane4:
         for item in itinerary_items:
             with st.container(border=True):
                 vis_sted_foto(item, key_suffix=f"plan_{item['id']}")
-                st.markdown(
-                    _render_travel_card_html(item, item.get("navn", "")),
-                    unsafe_allow_html=True,
-                )
+                _vis_travel_card(item, item.get("navn", ""))
                 if st.button(
                     tr("reiseplan_fjern"),
                     key=f"reiseplan_remove_{item['id']}",
