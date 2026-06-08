@@ -380,18 +380,24 @@ _spraak = spraak if spraak in TEKSTER else "NO"
 # Sikrer overnatting-tekster selv om eldre translations.py mangler nøkler
 _HOTELL_TEKST_FALLBACK = {
     "NO": {
+        "hjem_metric_oppdagelser": "✨ Oppdagelser",
         "fane_hotell": "🛏️ Overnatting",
-        "hjem_metric_hoteller": "🛏️ Unik overnatting",
-        "hotell_header": "🛏️ Unik overnatting",
-        "hotell_sok": "🔍 Søk etter navn eller by (overnatting)",
+        "fane_mat": "🍽️ Mat-oppdagelser",
+        "hjem_metric_hoteller": "🛏️ Overnatting",
+        "hotell_header": "🛏️ Overnatting-oppdagelser",
+        "hotell_sok": "🔍 Søk overnatting (navn eller by)",
         "hotell_sorter_type": "Sorter etter type",
         "hotell_pris": "💰 Prisnivå:",
-        "hotell_ingen_treff": "Ingen overnatting matchet søket ditt.",
-        "hotell_i_db": "{0} overnattingsteder i databasen",
+        "hotell_ingen_treff": "Ingen overnatting-oppdagelser matchet søket ditt.",
+        "hotell_i_db": "{0} overnatting-oppdagelser i databasen",
         "hotell_kart_expander": "🗺️ Kart over overnatting",
-        "hotell_pa_kart": "{0} overnattingsteder på kartet",
-        "type_hotell": "Overnatting",
-        "sank_min_score_fast": "Perler: minimum {0}/10 unikhet.",
+        "hotell_pa_kart": "{0} overnatting-oppdagelser på kartet",
+        "type_hotell": "Overnatting-oppdagelse",
+        "type_perle": "Oppdagelse",
+        "favoritt_knapp": "Lagre oppdagelse i reiseplanen",
+        "sank_expander": "Finn nye oppdagelser (med KI)",
+        "reiseplan_fane": "✨ Dine oppdagelser",
+        "sank_min_score_fast": "Oppdagelser: minimum {0}/10 unikhet.",
         "hotell_min_unikhet": "Overnatting: minimum {0}/10 unikhet.",
         "mat_min_unikhet": "Mat: minimum {0}/10 unikhet.",
         "sank_rapport": "Foreslått: {0} · Vises: {1} · Allerede i appen: {2} · Lav score: {3} · Uten kart: {4} · Ugyldig felt: {5}",
@@ -401,18 +407,24 @@ _HOTELL_TEKST_FALLBACK = {
         "sank_ingen_tom": "KI returnerte ingen forslag for dette området.",
     },
     "EN": {
+        "hjem_metric_oppdagelser": "✨ Discoveries",
         "fane_hotell": "🛏️ Stays",
-        "hjem_metric_hoteller": "🛏️ Unique stays",
-        "hotell_header": "🛏️ Unique places to stay",
-        "hotell_sok": "🔍 Search by name or city (stays)",
+        "fane_mat": "🍽️ Food discoveries",
+        "hjem_metric_hoteller": "🛏️ Stays",
+        "hotell_header": "🛏️ Stay discoveries",
+        "hotell_sok": "🔍 Search stays (name or city)",
         "hotell_sorter_type": "Filter by type",
         "hotell_pris": "💰 Price level:",
-        "hotell_ingen_treff": "No stays matched your search.",
-        "hotell_i_db": "{0} stays in the database",
+        "hotell_ingen_treff": "No stay discoveries matched your search.",
+        "hotell_i_db": "{0} stay discoveries in the database",
         "hotell_kart_expander": "🗺️ Map of stays",
-        "hotell_pa_kart": "{0} stays on the map",
-        "type_hotell": "Stay",
-        "sank_min_score_fast": "Gems: minimum {0}/10 uniqueness.",
+        "hotell_pa_kart": "{0} stay discoveries on the map",
+        "type_hotell": "Stay discovery",
+        "type_perle": "Discovery",
+        "favoritt_knapp": "Save discovery to your plan",
+        "sank_expander": "Find new discoveries (with AI)",
+        "reiseplan_fane": "✨ Your discoveries",
+        "sank_min_score_fast": "Discoveries: minimum {0}/10 uniqueness.",
         "hotell_min_unikhet": "Stays: minimum {0}/10 uniqueness.",
         "mat_min_unikhet": "Food: minimum {0}/10 uniqueness.",
         "sank_rapport": "Suggested: {0} · Shown: {1} · Already in app: {2} · Low score: {3} · No map: {4} · Invalid fields: {5}",
@@ -1151,7 +1163,7 @@ def _kilde_type_visning(kandidat):
         return tr("type_hotell")
     if kilde == "restaurant":
         return tr("type_mat", "Spisested")
-    return tr("type_perle", "Perle")
+    return tr("type_perle", "Oppdagelse")
 
 
 def _synk_kandidat_kilde_type(kandidat):
@@ -2950,17 +2962,14 @@ fane0, fane_helgeby, fane1, fane2, fane3, fane4, fane5 = st.tabs(
 # --- FANE 0: HJEM & RADAR (felles startside) ---
 with fane0:
     st.header(T["hjem_header"])
-    col1, col2, col3, col4 = st.columns(4)
+    alle_oppdagelser = _alle_steder_i_databasen()
+    col1, col2 = st.columns(2)
     with col1:
-        st.metric(T["hjem_metric_perler"], len(SKJULTE_PERLER_DB))
+        st.metric(tr("hjem_metric_oppdagelser"), len(alle_oppdagelser))
     with col2:
-        st.metric(T["hjem_metric_spisesteder"], len(LOKALE_SPISESTEDER_DB))
-    with col3:
-        st.metric(tr("hjem_metric_hoteller"), len(LOKALE_HOTELLER_DB))
-    with col4:
         st.metric(
             T["hjem_metric_land"],
-            len(set(s["country_code"] or s["land"] for s in SKJULTE_PERLER_DB)),
+            len(set(s["country_code"] or s["land"] for s in alle_oppdagelser)),
         )
 
     st.divider()
