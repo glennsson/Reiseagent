@@ -260,6 +260,48 @@ def lag_chat_oppdag_kart(lat, lon, alle_steder, sentrum_navn="", radius_km=50):
     return m
 
 
+def lag_reiseplan_rute_kart(items):
+    """Reiseplan-kart med nummererte markører og rute-linje mellom stopp."""
+    med_koord = [
+        i for i in items if i.get("latitude") is not None and i.get("longitude") is not None
+    ]
+    if not med_koord:
+        return lag_stedskart(items)
+
+    lat_snitt = sum(float(i["latitude"]) for i in med_koord) / len(med_koord)
+    lon_snitt = sum(float(i["longitude"]) for i in med_koord) / len(med_koord)
+    zoom = 6 if len(med_koord) > 3 else 8
+    m = _nytt_folium_kart([lat_snitt, lon_snitt], zoom_start=zoom)
+
+    koordinater = []
+    for rekke_nr, item in enumerate(med_koord, start=1):
+        lat, lon = float(item["latitude"]), float(item["longitude"])
+        koordinater.append([lat, lon])
+        folium.Marker(
+            location=[lat, lon],
+            tooltip=f"{rekke_nr}. {item.get('navn', '')} ({item.get('by', '')})",
+            popup=folium.Popup(
+                f"<b>{rekke_nr}. {html.escape(item.get('navn', ''))}</b><br>"
+                f"{html.escape(item.get('by', ''))}, {html.escape(item.get('land', ''))}",
+                max_width=260,
+            ),
+            icon=_lag_modern_kart_div_icon(
+                kart_markor_farge(item),
+                label=str(rekke_nr),
+            ),
+        ).add_to(m)
+
+    if len(koordinater) >= 2:
+        folium.PolyLine(
+            koordinater,
+            color=KART_SENTRUM_FARGE,
+            weight=4,
+            opacity=0.82,
+            dash_array="8, 10",
+        ).add_to(m)
+    return m
+
+
 def lag_radar_kart(treff_liste, sentrum=None, sentrum_navn="", zoom_start=7):
     if sentrum:
         m = _nytt_folium_kart([sentrum[0], sentrum[1]], zoom_start=zoom_start)

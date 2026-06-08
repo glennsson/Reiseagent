@@ -2,6 +2,69 @@
 
 import streamlit as st
 
+from ui_cards import vis_tom_tilstand
+
+
+def _render_ki_kandidat_kort(
+    kandidat,
+    idx,
+    *,
+    tr,
+    vis_sted_foto,
+    render_travel_card_html,
+    sted_tittel_fn,
+    sted_emoji_fn,
+    berik_kandidat_fra_db,
+    kandidat_lagringsstatus,
+    render_reiseplan_knapp_agent,
+    chat_lagre_tekster,
+    lagre_agent_perle_i_db,
+    legg_lagret_sted_i_lokale_lister,
+):
+    with st.container(border=True):
+        visning = dict(kandidat)
+        if berik_kandidat_fra_db:
+            visning = berik_kandidat_fra_db(visning)
+        if not visning.get("id"):
+            visning["id"] = visning.get("agent_id", f"sank_{idx}")
+        vis_sted_foto(
+            visning,
+            key_suffix=f"sank_{idx}_{visning.get('agent_id', idx)}",
+            autoload=True,
+        )
+        tittel = sted_tittel_fn(visning, sted_emoji_fn(visning))
+        st.markdown(render_travel_card_html(visning, tittel), unsafe_allow_html=True)
+        if kandidat.get("latitude") is None or kandidat.get("longitude") is None:
+            st.caption(tr("sank_uten_koordinater"))
+        lagringsstatus = kandidat.get("lagringsstatus") or kandidat_lagringsstatus(
+            kandidat
+        )
+        if lagringsstatus.get("melding_nokkel") and (
+            lagringsstatus.get("allerede_synlig") or lagringsstatus.get("erstatter")
+        ):
+            st.caption(tr(lagringsstatus["melding_nokkel"]))
+        col_plan, col_db = st.columns([1, 1])
+        with col_plan:
+            render_reiseplan_knapp_agent(
+                kandidat, f"sank_{idx}_{kandidat['agent_id']}"
+            )
+        with col_db:
+            if lagringsstatus.get("allerede_synlig"):
+                pass
+            elif st.button(
+                chat_lagre_tekster(kandidat)[0],
+                key=f"sank_save_{idx}_{kandidat['agent_id']}",
+                use_container_width=True,
+            ):
+                lagret = lagre_agent_perle_i_db(kandidat)
+                legg_lagret_sted_i_lokale_lister(lagret)
+                rest = st.session_state.get("sank_kandidater", [])
+                st.session_state["sank_kandidater"] = [
+                    k for k in rest if k.get("agent_id") != kandidat.get("agent_id")
+                ]
+                st.toast(chat_lagre_tekster(kandidat)[1])
+                st.rerun()
+
 
 def render_sank_ki_panel(
     *,
@@ -14,6 +77,11 @@ def render_sank_ki_panel(
     kandidat_lagringsstatus,
     render_reiseplan_knapp_agent,
     chat_lagre_tekster,
+    vis_sted_foto,
+    berik_kandidat_fra_db=None,
+    render_travel_card_html,
+    sted_tittel_fn,
+    sted_emoji_fn,
 ):
     """KI-søk etter nye oppdagelser — egen fane, ikke inne i reiseekspert."""
     with st.form("sank_perler_form"):
@@ -129,59 +197,41 @@ def render_sank_ki_panel(
             st.success(tr("sank_lagret_alle").format(lagret_antall))
             st.rerun()
 
-        for idx, kandidat in enumerate(visningsliste):
-            with st.container(border=True):
-                st.markdown(
-                    f"**{kandidat['navn']}**  \n"
-                    + tr("sank_kandidat_meta").format(
-                        kilde_type_visning(kandidat),
-                        kandidat.get("saerhetsscore", 0),
-                        kandidat["by"],
-                        kandidat["land"],
+        for i in range(0, len(visningsliste), 2):
+            cols = st.columns(2)
+            for j in range(2):
+                if i + j >= len(visningsliste):
+                    continue
+                kandidat = visningsliste[i + j]
+                idx = i + j
+                with cols[j]:
+                    _render_ki_kandidat_kort(
+                        kandidat,
+                        idx,
+                        tr=tr,
+                        vis_sted_foto=vis_sted_foto,
+                        render_travel_card_html=render_travel_card_html,
+                        sted_tittel_fn=sted_tittel_fn,
+                        sted_emoji_fn=sted_emoji_fn,
+                        berik_kandidat_fra_db=berik_kandidat_fra_db,
+                        kandidat_lagringsstatus=kandidat_lagringsstatus,
+                        render_reiseplan_knapp_agent=render_reiseplan_knapp_agent,
+                        chat_lagre_tekster=chat_lagre_tekster,
+                        lagre_agent_perle_i_db=lagre_agent_perle_i_db,
+                        legg_lagret_sted_i_lokale_lister=legg_lagret_sted_i_lokale_lister,
                     )
-                )
-                if kandidat.get("beskrivelse"):
-                    st.write(kandidat["beskrivelse"])
-                if kandidat.get("latitude") is None or kandidat.get("longitude") is None:
-                    st.caption(tr("sank_uten_koordinater"))
-                lagringsstatus = kandidat.get("lagringsstatus") or kandidat_lagringsstatus(
-                    kandidat
-                )
-                if lagringsstatus.get("melding_nokkel") and (
-                    lagringsstatus.get("allerede_synlig") or lagringsstatus.get("erstatter")
-                ):
-                    st.caption(tr(lagringsstatus["melding_nokkel"]))
-                col_plan, col_db = st.columns([1, 1])
-                with col_plan:
-                    render_reiseplan_knapp_agent(
-                        kandidat, f"sank_{idx}_{kandidat['agent_id']}"
-                    )
-                with col_db:
-                    if lagringsstatus.get("allerede_synlig"):
-                        pass
-                    elif st.button(
-                        chat_lagre_tekster(kandidat)[0],
-                        key=f"sank_save_{idx}_{kandidat['agent_id']}",
-                        use_container_width=True,
-                    ):
-                        lagret = lagre_agent_perle_i_db(kandidat)
-                        legg_lagret_sted_i_lokale_lister(lagret)
-                        rest = st.session_state.get("sank_kandidater", [])
-                        st.session_state["sank_kandidater"] = [
-                            k for k in rest if k.get("agent_id") != kandidat.get("agent_id")
-                        ]
-                        st.toast(chat_lagre_tekster(kandidat)[1])
-                        st.rerun()
     elif sank_rapport and sank_rapport.get("godkjent", 0) == 0:
         if sank_rapport.get("foreslaatt", 0) == 0:
-            st.info(tr("sank_ingen_tom"))
+            vis_tom_tilstand("✨", tr("sank_ingen_tom_tittel"), tr("sank_ingen_tom"))
         else:
-            st.info(
+            vis_tom_tilstand(
+                "🔍",
+                tr("sank_ingen_tittel"),
                 tr("sank_ingen")
                 + " "
                 + tr("sank_ingen_detalj").format(
                     sank_rapport.get("forkastet_score", 0),
                     sank_rapport.get("forkastet_duplikat", 0),
                     sank_rapport.get("forkastet_normalisering", 0),
-                )
+                ),
             )

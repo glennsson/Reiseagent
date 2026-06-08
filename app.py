@@ -6,7 +6,6 @@ import json
 import re
 import asyncio
 from pathlib import Path
-import folium
 from streamlit_folium import st_folium
 from dotenv import load_dotenv
 from streamlit_js_eval import get_geolocation
@@ -37,14 +36,19 @@ from persistence import (
 )
 from ui_cards import (
     behandle_affiliate_pending,
+    injiser_mork_modus_css,
     render_affiliate_lenker as _ui_render_affiliate_lenker,
+    render_hero_html,
+    render_land_kort_html,
     render_travel_card_html as _ui_render_travel_card_html,
     vis_sted_foto as _ui_vis_sted_foto,
+    vis_tom_tilstand,
 )
 from kart_utils import (
     filtrer_data,
     lag_chat_oppdag_kart,
     lag_radar_kart,
+    lag_reiseplan_rute_kart,
     lag_stedskart,
     optimaliser_reiserute_naermeste_nabo,
     regn_ut_avstand_km,
@@ -434,6 +438,14 @@ st.sidebar.checkbox(
     help=tr("bilde_autoload_help"),
 )
 st.sidebar.checkbox(
+    tr("mork_modus_label"),
+    value=st.session_state.get("mork_modus", False),
+    key="mork_modus",
+    help=tr("mork_modus_help"),
+)
+if st.session_state.get("mork_modus"):
+    injiser_mork_modus_css()
+st.sidebar.checkbox(
     tr("perf_debug_label"),
     value=st.session_state.get("vis_perf_debug", False),
     key="vis_perf_debug",
@@ -468,6 +480,19 @@ def _lagre_profil_ved_endring(ny_profil):
         )
         st.session_state._profil_lagret_snapshot = snapshot
 
+
+with st.sidebar.expander(tr("snarveier_expander"), expanded=False):
+    st.caption(tr("snarveier_hjelp"))
+    for snarvei in (
+        tr("fane_hjem"),
+        tr("fane_ki"),
+        tr("fane_mat"),
+        tr("fane_hotell"),
+        tr("reiseplan_fane"),
+        tr("fane_chat"),
+        tr("fane_transport"),
+    ):
+        st.markdown(f"• {snarvei}")
 
 with st.sidebar.expander(tr("profil_expander"), expanded=False):
     _profil = _normaliser_profil(st.session_state.profil)
@@ -1026,8 +1051,17 @@ def render_chat_agent_perle_handlinger(kandidat, key_suffix, chat_tekst=""):
     """Viser lagre-i-db og legg-i-reiseplan for en oppdaget perle."""
     kandidat = _juster_agent_perle_fra_chat_tekst(dict(kandidat), chat_tekst)
     lagre_knapp, lagre_toast = _chat_lagre_tekster(kandidat)
+    visning = _berik_kandidat_fra_db(dict(kandidat))
+    if not visning.get("id"):
+        visning["id"] = visning.get("agent_id", f"chat_{key_suffix}")
     with st.container(border=True):
-        st.info(_chat_agent_oppdaget_tekst(kandidat))
+        st.caption(_chat_agent_oppdaget_tekst(kandidat))
+        vis_sted_foto(visning, key_suffix=f"chat_{key_suffix}", autoload=True)
+        chat_tittel = sted_tittel_med_profil(visning, _sted_emoji(visning))
+        st.markdown(
+            _render_travel_card_html(visning, chat_tittel),
+            unsafe_allow_html=True,
+        )
         col_plan, col_db = st.columns([1, 1])
         with col_plan:
             render_reiseplan_knapp_agent(kandidat, f"chat_{key_suffix}")
@@ -2015,8 +2049,10 @@ def render_affiliate_lenker(sted, source_view, index=None):
     )
 
 
-def vis_sted_foto(sted, key_suffix=""):
-    _ui_vis_sted_foto(sted, key_suffix, tr, _hent_sted_bilde_for_visning)
+def vis_sted_foto(sted, key_suffix="", *, autoload=False):
+    _ui_vis_sted_foto(
+        sted, key_suffix, tr, _hent_sted_bilde_for_visning, autoload=autoload
+    )
 
 
 def render_reiseplan_knapp(place, key_prefix, index=None):
@@ -2461,6 +2497,10 @@ def _bygg_rag_kontekst(sporsmal):
 # ========================================
 st.title(T["app_tittel"])
 st.caption(T["app_caption"])
+st.markdown(
+    f'<p class="he-mobil-fane-hint">{html.escape(tr("mobil_fane_hint"))}</p>',
+    unsafe_allow_html=True,
+)
 
 fane0, fane_ki, fane1, fane2, fane3, fane4, fane5 = st.tabs(
     [
@@ -2479,14 +2519,11 @@ fane0, fane_ki, fane1, fane2, fane3, fane4, fane5 = st.tabs(
 with fane0:
     st.header(T["hjem_header"])
     alle_oppdagelser = _alle_steder_i_databasen()
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric(tr("hjem_metric_oppdagelser"), len(alle_oppdagelser))
-    with col2:
-        st.metric(
-            T["hjem_metric_land"],
-            len(set(s["country_code"] or s["land"] for s in alle_oppdagelser)),
-        )
+    antall_land = len(set(s["country_code"] or s["land"] for s in alle_oppdagelser))
+    st.markdown(
+        render_hero_html(len(alle_oppdagelser), antall_land, tr),
+        unsafe_allow_html=True,
+    )
 
     unike_land_hjem = sorted({s["land"] for s in alle_oppdagelser if s.get("land")})
     rand_c1, rand_c2 = st.columns([2, 1])
@@ -2534,8 +2571,19 @@ with fane0:
     with st.expander(tr("perler_reisemal_header"), expanded=False):
         land_grupper = _grupper_oppdagelser_pa_land(alle_oppdagelser)
         if not land_grupper:
-            st.info(tr("perler_ingen_reisemal"))
+            vis_tom_tilstand("🗺️", tr("perler_ingen_reisemal"), tr("perler_ingen_reisemal"))
         else:
+            land_kort_html = '<div class="he-land-grid">'
+            for land, steder_i_land in land_grupper.items():
+                eksempel = steder_i_land[0] if steder_i_land else {}
+                land_kort_html += render_land_kort_html(
+                    land,
+                    tr("land_kort_antall").format(len(steder_i_land)),
+                    eksempel.get("navn", ""),
+                    eksempel.get("country_code", ""),
+                )
+            land_kort_html += "</div>"
+            st.markdown(land_kort_html, unsafe_allow_html=True)
             for land, steder_i_land in land_grupper.items():
                 with st.expander(f"{land} ({len(steder_i_land)})", expanded=False):
                     for sted in steder_i_land:
@@ -2694,17 +2742,37 @@ with fane0:
                 )
                 valgt_perle = valgt_treff["data"]
                 st.markdown(tr("kart_valgt_sted"))
-                st.markdown(
-                    f"**{valgt_perle['navn']}** — {valgt_perle['by']}, {valgt_perle['land']}  \n"
-                    f"*{vis_sted_type(valgt_perle)}*"
-                )
-                if valgt_treff["avstand"] > 0:
-                    st.caption(f"{valgt_treff['avstand']} km {T['radar_unna']}")
-                st.write(valgt_perle.get("beskrivelse", ""))
+                with st.container(border=True):
+                    valgt_tittel = sted_tittel_med_profil(
+                        valgt_perle, _sted_emoji(valgt_perle)
+                    )
+                    vis_sted_foto(
+                        valgt_perle,
+                        key_suffix=f"radar_valgt_{valgt_perle.get('id', 'x')}",
+                        autoload=True,
+                    )
+                    st.markdown(
+                        _render_travel_card_html(valgt_perle, valgt_tittel),
+                        unsafe_allow_html=True,
+                    )
+                    if valgt_treff["avstand"] > 0:
+                        st.caption(f"{valgt_treff['avstand']} km {T['radar_unna']}")
+                    valgt_view = (
+                        "mat"
+                        if valgt_perle.get("source_type") == "restaurant"
+                        else "overnatting"
+                        if valgt_perle.get("source_type") == "hotel"
+                        else "perle"
+                    )
+                    render_reiseplan_knapp(valgt_perle, valgt_view, index="radar_valgt")
         elif soke_metode == T["radar_sted_sok"] and not (sted_sok or "").strip():
             st.caption(tr("radar_skriv_sted_hint"))
         elif soke_metode != T["radar_land_sok"] or valgt_land:
-            st.info(T["radar_ingen_treff"])
+            vis_tom_tilstand(
+                "📡",
+                tr("tom_radar_tittel"),
+                tr("tom_radar_tekst"),
+            )
 
         st.write("---")
         st.subheader(T["perler_header"])
@@ -2810,7 +2878,11 @@ with fane0:
                     st.session_state["perler_vis_antall"] = vis_antall + 12
                     st.rerun()
         else:
-            st.info(T["perler_ingen_treff"])
+            vis_tom_tilstand(
+                "🔍",
+                tr("tom_perler_tittel"),
+                T["perler_ingen_treff"],
+            )
             if sok_perle and any(
                 _sted_matcher_sok(s, sok_perle) for s in LOKALE_SPISESTEDER_DB
             ):
@@ -2837,10 +2909,14 @@ with fane_ki:
             sanke_perler_for_omrade=sanke_perler_for_omrade,
             lagre_agent_perle_i_db=lagre_agent_perle_i_db,
             legg_lagret_sted_i_lokale_lister=_legg_lagret_sted_i_lokale_lister,
-            kilde_type_visning=_kilde_type_visning,
             kandidat_lagringsstatus=_kandidat_lagringsstatus,
             render_reiseplan_knapp_agent=render_reiseplan_knapp_agent,
             chat_lagre_tekster=_chat_lagre_tekster,
+            vis_sted_foto=vis_sted_foto,
+            berik_kandidat_fra_db=_berik_kandidat_fra_db,
+            render_travel_card_html=_render_travel_card_html,
+            sted_tittel_fn=sted_tittel_med_profil,
+            sted_emoji_fn=_sted_emoji,
         )
 
     if ki_modus == tr("ki_modus_helgeby"):
@@ -2910,20 +2986,26 @@ with fane_ki:
         if helgeby_kandidater:
             for idx, kandidat in enumerate(helgeby_kandidater):
                 with st.container(border=True):
+                    vis_sted = {
+                        **kandidat,
+                        "navn": kandidat.get("by", ""),
+                        "id": kandidat.get("agent_id", f"helgeby_{idx}"),
+                        "type": "kultur",
+                    }
+                    vis_sted_foto(
+                        vis_sted,
+                        key_suffix=f"helgeby_{idx}_{vis_sted['id']}",
+                        autoload=True,
+                    )
+                    helge_tittel = f"🌆 {kandidat['by']}"
                     st.markdown(
-                        f"**{kandidat['by']}**  \n"
-                        + tr("helgeby_kandidat_meta").format(
-                            kandidat["by"],
-                            kandidat["land"],
-                            kandidat.get("saerhetsscore", 0),
-                        )
+                        _render_travel_card_html(vis_sted, helge_tittel),
+                        unsafe_allow_html=True,
                     )
                     if kandidat.get("hvorfor_helg"):
                         st.markdown(
                             f"**{tr('helgeby_hvorfor')}** {kandidat['hvorfor_helg']}"
                         )
-                    elif kandidat.get("beskrivelse"):
-                        st.write(kandidat["beskrivelse"])
                     if kandidat.get("highlights"):
                         st.markdown(
                             f"**{tr('helgeby_highlights')}:** "
@@ -2971,7 +3053,7 @@ with fane_ki:
                             st.toast(tr("chat_lagre_toast"))
                             st.rerun()
         elif helgeby_rapport and helgeby_rapport.get("godkjent", 0) == 0:
-            st.info(tr("helgeby_ingen"))
+            vis_tom_tilstand("🌆", tr("sank_ingen_tittel"), tr("helgeby_ingen"))
 
 
 # --- FANE 1: MAT ---
@@ -3038,7 +3120,7 @@ with fane1:
                         render_reiseplan_knapp(s, "mat", index=i + j)
                         render_affiliate_lenker(s, "mat", index=i + j)
     else:
-        st.info(T["mat_ingen_treff"])
+        vis_tom_tilstand("🍽️", tr("tom_perler_tittel"), T["mat_ingen_treff"])
 
 
 # --- FANE 2: OVERNATTING ---
@@ -3113,7 +3195,7 @@ with fane2:
                         render_reiseplan_knapp(s, "hotell", index=i + j)
                         render_affiliate_lenker(s, "hotell", index=i + j)
     else:
-        st.info(tr("hotell_ingen_treff"))
+        vis_tom_tilstand("🛏️", tr("tom_perler_tittel"), tr("hotell_ingen_treff"))
 
 
 # --- FANE 3: REISE-CHAT ---
@@ -3365,7 +3447,11 @@ with fane4:
                     st.rerun()
 
     if not itinerary_items:
-        st.info(T["reiseplan_tom"])
+        vis_tom_tilstand(
+            "✨",
+            tr("tom_reiseplan_tittel"),
+            T["reiseplan_tom"],
+        )
     else:
         st.download_button(
             T["reiseplan_last_ned"],
@@ -3377,25 +3463,14 @@ with fane4:
         )
 
         if any(item.get("latitude") and item.get("longitude") for item in itinerary_items):
-            m = _nytt_folium_kart([54.0, 14.0], zoom_start=4)
-            rekke_nr = 0
-            for item in itinerary_items:
-                if item.get("latitude") and item.get("longitude"):
-                    rekke_nr += 1
-                    folium.Marker(
-                        location=[item["latitude"], item["longitude"]],
-                        tooltip=f"{rekke_nr}. {item['navn']} ({item['by']})",
-                        popup=folium.Popup(
-                            f"<b>{rekke_nr}. {html.escape(item['navn'])}</b><br>"
-                            f"{html.escape(item['by'])}, {html.escape(item['land'])}",
-                            max_width=260,
-                        ),
-                        icon=_lag_modern_kart_div_icon(
-                            kart_markor_farge(item),
-                            label=str(rekke_nr),
-                        ),
-                    ).add_to(m)
-            st_folium(m, width=900, height=420, returned_objects=[], key="reiseplan_kart")
+            reiseplan_kart = lag_reiseplan_rute_kart(itinerary_items)
+            st_folium(
+                reiseplan_kart,
+                width=900,
+                height=420,
+                returned_objects=[],
+                key="reiseplan_kart",
+            )
 
         for item in itinerary_items:
             with st.container(border=True):

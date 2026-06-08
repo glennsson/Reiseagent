@@ -102,7 +102,7 @@ small,
 
 .travel-card {
     min-height: 0;
-    padding: 0.5rem 0.6rem;
+    padding: 0.55rem 0.7rem;
     margin: 0.3rem 0 0.4rem;
     background: var(--gemini-surface) !important;
     border: 1px solid var(--gemini-border) !important;
@@ -110,12 +110,51 @@ small,
     box-shadow: 0 2px 8px rgba(60, 64, 67, 0.08);
 }
 
+.travel-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.45rem;
+    margin-bottom: 0.15rem;
+}
+
 .travel-card-title {
-    margin: 0 0 0.15rem;
-    font-size: 0.86rem !important;
+    margin: 0;
+    flex: 1;
+    font-size: 0.9rem !important;
     font-weight: 600 !important;
     line-height: 1.25 !important;
     color: var(--gemini-text) !important;
+}
+
+.unikhet-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    line-height: 1.2;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.unikhet-hoy {
+    background: color-mix(in srgb, #1B5E20 14%, var(--gemini-surface));
+    color: #1B5E20 !important;
+    border-color: color-mix(in srgb, #1B5E20 35%, var(--gemini-border));
+}
+
+.unikhet-middels {
+    background: color-mix(in srgb, #E37400 14%, var(--gemini-surface));
+    color: #C26400 !important;
+    border-color: color-mix(in srgb, #E37400 35%, var(--gemini-border));
+}
+
+.unikhet-lav {
+    background: color-mix(in srgb, var(--gemini-muted) 12%, var(--gemini-surface));
+    color: var(--gemini-muted) !important;
+    border-color: var(--gemini-border);
 }
 
 .travel-card-meta {
@@ -157,11 +196,11 @@ small,
 
 [data-testid="column"] [data-testid="stImage"] img,
 [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stImage"] img {
-    border-radius: 10px;
+    border-radius: 12px;
     object-fit: cover;
-    max-height: 96px;
+    max-height: 160px;
     width: 100%;
-    box-shadow: 0 4px 12px rgba(60, 64, 67, 0.12);
+    box-shadow: 0 4px 14px rgba(60, 64, 67, 0.14);
 }
 
 [data-testid="column"] [data-testid="stCaptionContainer"],
@@ -182,6 +221,165 @@ small,
     box-shadow: 0 2px 8px rgba(60, 64, 67, 0.08) !important;
 }
 
+.he-hero {
+    margin: 0.35rem 0 1rem;
+    padding: 1.1rem 1.25rem;
+    border-radius: var(--gemini-radius);
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--gemini-surface) 92%, rgba(26, 115, 232, 0.12)),
+        color-mix(in srgb, var(--gemini-surface) 88%, rgba(161, 66, 244, 0.1))
+    );
+    border: 1px solid var(--gemini-border);
+    box-shadow: var(--gemini-shadow);
+}
+
+.he-hero-tagline {
+    margin: 0 0 0.55rem !important;
+    font-size: 1.02rem !important;
+    font-weight: 600 !important;
+    color: var(--gemini-text) !important;
+}
+
+.he-hero-stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.he-hero-stat {
+    font-size: 0.92rem !important;
+    color: var(--gemini-text-secondary) !important;
+}
+
+.he-hero-stat strong {
+    font-size: 1.35rem !important;
+    font-weight: 700 !important;
+    color: var(--gemini-blue) !important;
+    margin-right: 0.2rem;
+}
+
+.he-hero-dot {
+    color: var(--gemini-muted) !important;
+    font-weight: 700 !important;
+}
+
+.he-land-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.55rem;
+    margin-bottom: 0.75rem;
+}
+
+.he-land-kort {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 12px;
+    background: var(--gemini-surface);
+    border: 1px solid var(--gemini-border);
+    box-shadow: 0 2px 8px rgba(60, 64, 67, 0.06);
+}
+
+.he-land-flagg {
+    font-size: 1.45rem;
+    line-height: 1;
+}
+
+.he-land-innhold {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.he-land-navn {
+    font-size: 0.88rem !important;
+    color: var(--gemini-text) !important;
+}
+
+.he-land-antall {
+    font-size: 0.74rem !important;
+    color: var(--gemini-muted) !important;
+    font-weight: 600 !important;
+}
+
+.he-land-eksempel {
+    font-size: 0.72rem !important;
+    color: var(--gemini-text-secondary) !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.he-empty {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    border-radius: var(--gemini-radius);
+    background: color-mix(in srgb, var(--gemini-surface-2) 55%, var(--gemini-surface));
+    border: 1px dashed var(--gemini-border);
+    margin: 0.5rem 0;
+}
+
+.he-empty-emoji {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.45rem;
+}
+
+.he-empty-tittel {
+    margin: 0 0 0.35rem !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    color: var(--gemini-text) !important;
+}
+
+.he-empty-tekst {
+    margin: 0 !important;
+    font-size: 0.86rem !important;
+    color: var(--gemini-muted) !important;
+    line-height: 1.45 !important;
+}
+
+.he-mobil-fane-hint {
+    display: none;
+    margin: 0 0 0.65rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--gemini-blue) 8%, var(--gemini-surface));
+    border: 1px solid color-mix(in srgb, var(--gemini-blue) 22%, var(--gemini-border));
+    font-size: 0.78rem !important;
+    color: var(--gemini-muted) !important;
+}
+
+[data-testid="stChatMessage"] {
+    border-radius: 16px !important;
+    padding: 0.65rem 0.85rem !important;
+    margin-bottom: 0.55rem !important;
+    border: 1px solid color-mix(in srgb, var(--gemini-border) 85%, transparent) !important;
+    background: color-mix(in srgb, var(--gemini-surface) 94%, var(--gemini-surface-2)) !important;
+    box-shadow: 0 2px 10px rgba(60, 64, 67, 0.06) !important;
+}
+
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--gemini-blue) 10%, var(--gemini-surface)),
+        color-mix(in srgb, var(--gemini-surface) 96%, transparent)
+    ) !important;
+    border-color: color-mix(in srgb, var(--gemini-blue) 24%, var(--gemini-border)) !important;
+}
+
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--gemini-purple) 8%, var(--gemini-surface)),
+        color-mix(in srgb, var(--gemini-surface) 96%, transparent)
+    ) !important;
+}
+
 .stTabs [data-baseweb="tab-list"] {
     position: sticky;
     top: 0.25rem;
@@ -189,6 +387,8 @@ small,
     display: flex;
     gap: 0.45rem;
     overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
     padding: 0.45rem;
     border-radius: 16px;
     backdrop-filter: blur(12px);
@@ -201,6 +401,8 @@ small,
 .stTabs [data-baseweb="tab"] {
     border-radius: 12px;
     padding: 0.5rem 0.95rem;
+    scroll-snap-align: start;
+    flex-shrink: 0;
     font-size: 0.82rem !important;
     background: color-mix(in srgb, var(--gemini-surface-2) 75%, transparent);
     border: 1px solid color-mix(in srgb, var(--gemini-border) 75%, transparent);
@@ -394,9 +596,23 @@ div[class*="st-key-plan_"] button:active {
         font-size: 2rem !important;
     }
 
+    .he-mobil-fane-hint {
+        display: block;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        min-width: max-content;
+        padding: 0.55rem 1rem;
+        font-size: 0.8rem !important;
+    }
+
+    .he-land-grid {
+        grid-template-columns: 1fr;
+    }
+
     [data-testid="column"] [data-testid="stImage"] img,
     [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stImage"] img {
-        max-height: 88px;
+        max-height: 96px;
     }
 
     .travel-card-desc {
