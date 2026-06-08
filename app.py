@@ -104,24 +104,38 @@ def _hent_kuratert_overnatting_for_visning():
     return [normalize_place(p, "hotel") for p in kilde]
 
 
+def _perle_nokkel(navn, by, land):
+    return f"{(navn or '').strip().lower()}|{(by or '').strip().lower()}|{(land or '').strip().lower()}"
+
+
+def _effektiv_kilde_type(sted):
+    """type-felt (f.eks. overnatting) veier tyngre enn feil source_type i lagret JSON."""
+    if not sted:
+        return "hidden_gem"
+    type_hint = (sted.get("type") or "").strip().lower()
+    if type_hint in ("hotell", "hotel", "overnatting", "lodging"):
+        return "hotel"
+    if type_hint in ("gastronomi", "restaurant", "mat"):
+        return "restaurant"
+    return (sted.get("source_type") or "hidden_gem").strip().lower()
+
+
 def _last_lokale_stedlister():
     """Oppfrisker lister fra SQLite ved hver Streamlit-kjøring."""
-    from place_quality import effektiv_kilde_type
-
     seed_places()
     kuratert_overnatting = _hent_kuratert_overnatting_for_visning()
     alle_db = get_places(seed=False)
     return (
         filtrer_steder_for_app(
-            [s for s in alle_db if effektiv_kilde_type(s) == "hidden_gem"]
+            [s for s in alle_db if _effektiv_kilde_type(s) == "hidden_gem"]
         ),
         filtrer_steder_for_app(
-            [s for s in alle_db if effektiv_kilde_type(s) == "restaurant"]
+            [s for s in alle_db if _effektiv_kilde_type(s) == "restaurant"]
         ),
         _sla_sammen_steder_etter_nokkel(
             kuratert_overnatting,
             filtrer_steder_for_app(
-                [s for s in alle_db if effektiv_kilde_type(s) == "hotel"]
+                [s for s in alle_db if _effektiv_kilde_type(s) == "hotel"]
             ),
         ),
     )
@@ -1118,17 +1132,6 @@ def lagre_agent_perle_i_db(kandidat):
 def _legg_lagret_sted_i_lokale_lister(lagret):
     """Oppdaterer tellere og faner etter DB-lagring."""
     _oppfrisk_lokale_stedlister()
-
-
-def _perle_nokkel(navn, by, land):
-    return f"{(navn or '').strip().lower()}|{(by or '').strip().lower()}|{(land or '').strip().lower()}"
-
-
-def _effektiv_kilde_type(kandidat):
-    """type-felt fra KI (f.eks. overnatting) veier tyngre enn feil source_type i JSON."""
-    from place_quality import effektiv_kilde_type
-
-    return effektiv_kilde_type(kandidat)
 
 
 def _kilde_type_visning(kandidat):

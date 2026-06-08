@@ -32,6 +32,7 @@ __all__ = [
     "SPANIA_MARKEDSDATA",
     "KURATERT_STED_IDS",
     "_RESTAURANT_STERKE_ORD",
+    "effektiv_kilde_type",
     "effektiv_saerhetsscore",
     "er_ki_eller_agent_lagret",
     "er_agent_forslag",
