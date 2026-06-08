@@ -381,6 +381,12 @@ T: dict[str, str] = {**TEKSTER["NO"], **TEKSTER[_spraak]}
 SKJULTE_PERLER_DB, LOKALE_SPISESTEDER_DB, LOKALE_HOTELLER_DB = _last_lokale_stedlister()
 
 
+def _oppfrisk_lokale_stedlister():
+    """Leser stedlister på nytt fra SQLite (etter lagring i DB)."""
+    global SKJULTE_PERLER_DB, LOKALE_SPISESTEDER_DB, LOKALE_HOTELLER_DB
+    SKJULTE_PERLER_DB, LOKALE_SPISESTEDER_DB, LOKALE_HOTELLER_DB = _last_lokale_stedlister()
+
+
 def tr(key: str, default: str | None = None) -> str:
     """Oversettelse: aktivt språk med norsk fallback."""
     if default is not None:
@@ -819,14 +825,110 @@ def parse_agent_perle_fra_ai_svar(ai_tekst):
         return None
 
 
+def _juster_agent_perle_fra_chat_tekst(kandidat, ai_tekst=""):
+    """Gjenkjenner overnatting/mat i reiseekspert-svar (JSON sier ofte feil type)."""
+    if not kandidat:
+        return kandidat
+    from place_quality import er_kjede_hotell, er_kjede_restaurant
+
+    blob = " ".join(
+        str(kandidat.get(f, "") or "")
+        for f in ("navn", "beskrivelse", "type")
+    )
+    if ai_tekst:
+        blob += " " + synlig_ai_svar(ai_tekst)
+    blob_lc = blob.lower()
+    type_hint = (kandidat.get("type") or "").lower()
+    eksplisitt = (kandidat.get("source_type") or "").strip().lower()
+
+    hotel_signal = eksplisitt == "hotel" or type_hint in (
+        "hotell",
+        "hotel",
+        "overnatting",
+        "lodging",
+    ) or any(
+        ordlyd in blob_lc
+        for ordlyd in (
+            "hotell",
+            "hotel",
+            "overnatting",
+            "gjestgiveri",
+            "pensjonat",
+            "hostel",
+            "suite",
+            "fyrvokter",
+            "grottehotell",
+            "bed and breakfast",
+            "bnb",
+        )
+    )
+    if hotel_signal and not er_kjede_hotell(blob_lc):
+        kandidat["source_type"] = "hotel"
+        kandidat["type"] = "overnatting"
+        return kandidat
+
+    mat_signal = eksplisitt == "restaurant" or type_hint in (
+        "gastronomi",
+        "restaurant",
+        "mat",
+    ) or any(ordlyd in blob_lc for ordlyd in _RESTAURANT_STERKE_ORD)
+    if mat_signal and not er_kjede_restaurant(blob_lc):
+        kandidat["source_type"] = "restaurant"
+        kandidat["type"] = "gastronomi"
+    return kandidat
+
+
+def _berik_agent_kandidat_for_lagring(kandidat):
+    """Fyller inn manglende felt før DB-lagring fra reiseekspert/KI."""
+    kandidat = dict(kandidat)
+    score = kandidat.get("saerhetsscore")
+    if not (kandidat.get("beskrivelse") or "").strip():
+        kandidat["beskrivelse"] = (
+            f"Oppdaget av KI-agent i chatten. Særhetsscore: {score}/10."
+            if score is not None
+            else "Oppdaget av KI-agent i chatten."
+        )
+    if not (kandidat.get("pris") or "").strip() and kandidat.get("source_type") == "hotel":
+        kandidat["pris"] = "€€"
+    return kandidat
+
+
+def _chat_lagre_tekster(kandidat):
+    """Knapp- og toast-tekst avhengig av hva som lagres."""
+    source = (kandidat or {}).get("source_type", "hidden_gem")
+    if source == "hotel":
+        return tr("chat_lagre_hotell"), tr("chat_lagre_toast_hotell")
+    if source == "restaurant":
+        return tr("chat_lagre_mat"), tr("chat_lagre_toast_mat")
+    return tr("chat_lagre_db"), tr("chat_lagre_toast")
+
+
+def _chat_agent_oppdaget_tekst(kandidat):
+    source = (kandidat or {}).get("source_type", "hidden_gem")
+    if source == "hotel":
+        nøkkel = "chat_agent_oppdaget_hotell"
+    elif source == "restaurant":
+        nøkkel = "chat_agent_oppdaget_mat"
+    else:
+        nøkkel = "chat_agent_oppdaget"
+    return tr(nøkkel).format(
+        kandidat["navn"],
+        kandidat["by"],
+        kandidat["land"],
+        kandidat["saerhetsscore"],
+    )
+
+
 def detekter_perle_fra_ai_svar(ai_tekst):
     """Finner mulig sted i AI-svaret (JSON først, deretter regex)."""
     if not ai_tekst:
         return None
 
     kandidat = parse_agent_perle_fra_ai_svar(ai_tekst)
-    if kandidat and kandidat.get("saerhetsscore", 0) >= MIN_UNIKHETSGRAD:
-        return kandidat
+    if kandidat:
+        kandidat = _juster_agent_perle_fra_chat_tekst(kandidat, ai_tekst)
+        if kandidat.get("saerhetsscore", 0) >= MIN_UNIKHETSGRAD:
+            return kandidat
 
     synlig = synlig_ai_svar(ai_tekst)
     mønstre = [
@@ -851,17 +953,15 @@ def detekter_perle_fra_ai_svar(ai_tekst):
         return None
 
     synlig_lc = synlig.lower()
-    if any(ordlyd in synlig_lc for ordlyd in _RESTAURANT_STERKE_ORD):
-        type_hint = "restaurant"
-    else:
-        type_hint = "kultur"
-    if type_hint == "restaurant" and score < MIN_UNIKHETSGRAD:
-        return None
     funn["saerhetsscore"] = score
-    funn["source_type"] = "restaurant" if type_hint == "restaurant" else "hidden_gem"
-    funn["type"] = "gastronomi" if type_hint == "restaurant" else "kultur"
     funn["beskrivelse"] = ""
     funn["agent_id"] = f"agent-{_slug_tekst(funn['navn'])}-{_slug_tekst(funn['by'])}-{_slug_tekst(funn['land'])}"
+    funn = _juster_agent_perle_fra_chat_tekst(funn, ai_tekst)
+    if funn.get("source_type") == "restaurant" and score < MIN_UNIKHETSGRAD:
+        return None
+    if funn.get("source_type") not in ("hotel", "restaurant"):
+        funn["source_type"] = "hidden_gem"
+        funn["type"] = "kultur"
     return funn
 
 
@@ -891,42 +991,39 @@ def agent_perle_til_reiseplan_sted(kandidat):
     }
 
 
-def render_chat_agent_perle_handlinger(kandidat, key_suffix):
+def render_chat_agent_perle_handlinger(kandidat, key_suffix, chat_tekst=""):
     """Viser lagre-i-db og legg-i-reiseplan for en oppdaget perle."""
+    kandidat = _juster_agent_perle_fra_chat_tekst(dict(kandidat), chat_tekst)
+    lagre_knapp, lagre_toast = _chat_lagre_tekster(kandidat)
     with st.container(border=True):
-        st.info(
-            tr("chat_agent_oppdaget").format(
-                kandidat["navn"],
-                kandidat["by"],
-                kandidat["land"],
-                kandidat["saerhetsscore"],
-            )
-        )
+        st.info(_chat_agent_oppdaget_tekst(kandidat))
         col_plan, col_db = st.columns([1, 1])
         with col_plan:
             render_reiseplan_knapp_agent(kandidat, f"chat_{key_suffix}")
         with col_db:
             if st.button(
-                tr("chat_lagre_db"),
+                lagre_knapp,
                 key=f"chat_save_db_{key_suffix}",
                 use_container_width=True,
             ):
                 lagret = lagre_agent_perle_i_db(kandidat)
                 _legg_lagret_sted_i_lokale_lister(lagret)
-                st.toast(tr("chat_lagre_toast"))
+                st.toast(lagre_toast)
                 st.rerun()
 
 
 def lagre_agent_perle_i_db(kandidat):
     """Lagrer agent-forslag permanent i places-tabellen."""
-    kandidat = dict(kandidat)
+    kandidat = _berik_agent_kandidat_for_lagring(kandidat)
     if kandidat.get("source_type") == "restaurant" and not _godkjent_restaurant_kandidat(
         kandidat, False
     ):
         kandidat["source_type"] = "hidden_gem"
         if kandidat.get("type") == "gastronomi":
             kandidat["type"] = "kultur"
-    if kandidat.get("source_type") == "hotel" and not _godkjent_hotel_kandidat(kandidat, False):
+    if kandidat.get("source_type") == "hotel" and not _godkjent_hotel_kandidat(
+        kandidat, False
+    ):
         kandidat["source_type"] = "hidden_gem"
         if kandidat.get("type") in ("hotell", "overnatting"):
             kandidat["type"] = "kultur"
@@ -949,13 +1046,16 @@ def lagre_agent_perle_i_db(kandidat):
         or f"Oppdaget av KI-agent i chatten. Særhetsscore: {kandidat['saerhetsscore']}/10.",
         "tips": "KI-agentforslag: sjekk stedet lokalt.",
         "beste_tid": "",
-        "pris": "€€",
+        "pris": (kandidat.get("pris") or "").strip() or "€€",
         "latitude": lat,
         "longitude": lon,
         "image_url": "",
         "country_code": "",
     }
+    if kandidat.get("saerhetsscore") is not None:
+        sted["saerhetsscore"] = kandidat["saerhetsscore"]
     normalisert = normalize_place(sted, kandidat["source_type"])
+    _slett_sted_med_nokkel_i_db(kandidat["navn"], kandidat["by"], kandidat["land"])
     init_db()
     with get_connection() as conn:
         conn.execute(
@@ -989,33 +1089,61 @@ def lagre_agent_perle_i_db(kandidat):
 
 
 def _legg_lagret_sted_i_lokale_lister(lagret):
-    """Oppdaterer lokale stedlister etter DB-lagring (kun hvis kvalitetsreglene er oppfylt)."""
-    if not oppfyller_visning_kriterier(lagret):
-        return
-    if lagret["source_type"] == "restaurant":
-        if not any(p.get("id") == lagret["id"] for p in LOKALE_SPISESTEDER_DB):
-            LOKALE_SPISESTEDER_DB.append(lagret)
-    elif lagret["source_type"] == "hotel":
-        if not any(p.get("id") == lagret["id"] for p in LOKALE_HOTELLER_DB):
-            LOKALE_HOTELLER_DB.append(lagret)
-    else:
-        if not any(p.get("id") == lagret["id"] for p in SKJULTE_PERLER_DB):
-            SKJULTE_PERLER_DB.append(lagret)
+    """Oppdaterer tellere og faner etter DB-lagring."""
+    _oppfrisk_lokale_stedlister()
 
 
 def _perle_nokkel(navn, by, land):
     return f"{(navn or '').strip().lower()}|{(by or '').strip().lower()}|{(land or '').strip().lower()}"
 
 
-def _hent_eksisterende_perle_nokler():
-    """Nøkler for steder som allerede finnes (minne + fersk SQLite)."""
-    keys = set()
+def _finn_synlig_sted(navn, by, land):
+    """Finner sted som faktisk telles i appen (Utforsk-tallene)."""
+    key = _perle_nokkel(navn, by, land)
     for sted in _alle_steder_i_databasen():
-        keys.add(_perle_nokkel(sted.get("navn"), sted.get("by"), sted.get("land")))
-    for source_type in ("hidden_gem", "restaurant", "hotel"):
-        for sted in get_places(source_type):
-            keys.add(_perle_nokkel(sted.get("navn"), sted.get("by"), sted.get("land")))
-    return keys
+        if _perle_nokkel(sted.get("navn"), sted.get("by"), sted.get("land")) == key:
+            return sted
+    return None
+
+
+def _kandidat_lagringsstatus(kandidat):
+    """Om KI-forslag kan lagres, allerede finnes synlig, eller bør oppgraderes."""
+    synlig = _finn_synlig_sted(kandidat.get("navn"), kandidat.get("by"), kandidat.get("land"))
+    ktype = (kandidat.get("source_type") or "hidden_gem").strip().lower()
+    if not synlig:
+        return {"kan_lagre": True, "allerede_synlig": False, "erstatter": False}
+    eks_type = (synlig.get("source_type") or "hidden_gem").strip().lower()
+    if eks_type == ktype:
+        melding = {
+            "hotel": "sank_allerede_i_db_hotell",
+            "restaurant": "sank_allerede_i_db_mat",
+        }.get(eks_type, "sank_allerede_i_db_perle")
+        return {"kan_lagre": False, "allerede_synlig": True, "melding_nokkel": melding}
+    erstatter_nokkel = {
+        ("hidden_gem", "hotel"): "sank_oppgrader_til_hotell",
+        ("hotel", "hidden_gem"): "sank_oppgrader_til_perle",
+        ("hidden_gem", "restaurant"): "sank_oppgrader_til_mat",
+        ("restaurant", "hidden_gem"): "sank_oppgrader_til_perle",
+    }.get((eks_type, ktype), "sank_oppgraderer_type")
+    return {
+        "kan_lagre": True,
+        "allerede_synlig": False,
+        "erstatter": True,
+        "erstatter_type": eks_type,
+        "melding_nokkel": erstatter_nokkel,
+    }
+
+
+def _slett_sted_med_nokkel_i_db(navn, by, land):
+    """Fjerner skjulte/utdaterte rader med samme navn+sted før ny lagring."""
+    key = _perle_nokkel(navn, by, land)
+    init_db()
+    with get_connection() as conn:
+        rows = conn.execute("SELECT id, name, city, country FROM places").fetchall()
+        for row in rows:
+            if _perle_nokkel(row[1], row[2], row[3]) == key:
+                conn.execute("DELETE FROM places WHERE id = ?", (row[0],))
+        conn.commit()
 
 
 def _fiks_los_json_tekst(rå):
@@ -1181,7 +1309,6 @@ def sanke_perler_for_omrade(omrade, antall=8, strict_mode=False):
             feil = f"{feil} (rå svar: {(content or '')[:400]})"
         raise RuntimeError(feil)
 
-    eksisterende = _hent_eksisterende_perle_nokler()
     nye_nokler = set()
     godkjente = []
     forkastet_duplikat = 0
@@ -1214,11 +1341,17 @@ def sanke_perler_for_omrade(omrade, antall=8, strict_mode=False):
             continue
 
         key = _perle_nokkel(kandidat["navn"], kandidat["by"], kandidat["land"])
-        if key in eksisterende or key in nye_nokler:
+        lagringsstatus = _kandidat_lagringsstatus(kandidat)
+        kandidat["lagringsstatus"] = lagringsstatus
+        if lagringsstatus["allerede_synlig"]:
+            forkastet_duplikat += 1
+            kandidat["allerede_i_db"] = True
+        elif key in nye_nokler:
             forkastet_duplikat += 1
             kandidat["allerede_i_db"] = True
         else:
             nye_nokler.add(key)
+            kandidat["allerede_i_db"] = False
         kandidater_for_geo.append({"kandidat": kandidat, "key": key})
 
     async def _geokod_kandidat_async(kandidat):
@@ -1308,6 +1441,114 @@ def _berik_rå_helgeby_kandidat(rå, omrade=""):
     return data
 
 
+def _hent_helgeby_hotell_liste_fra_rå(rå):
+    """Henter hotell-liste fra ulike KI-feltnavn."""
+    if not isinstance(rå, dict):
+        return []
+    for key in (
+        "hoteller",
+        "hotels",
+        "overnatting",
+        "overnattinger",
+        "stays",
+        "accommodation",
+        "accommodations",
+        "hotell",
+    ):
+        val = rå.get(key)
+        if isinstance(val, list):
+            return val
+        if isinstance(val, dict):
+            return [val]
+    return []
+
+
+def _normaliser_helgeby_hotell(rå_hotell, by, land, omrade=""):
+    if isinstance(rå_hotell, str):
+        navn = rå_hotell.strip()
+        if not navn:
+            return None
+        rå_hotell = {"navn": navn, "beskrivelse": navn}
+    if not isinstance(rå_hotell, dict):
+        return None
+    data = _berik_rå_sank_kandidat(rå_hotell, omrade)
+    navn = (
+        data.get("navn")
+        or data.get("name")
+        or data.get("hotel")
+        or data.get("title")
+        or ""
+    ).strip()
+    if not navn:
+        return None
+    data["navn"] = navn
+    data["by"] = by
+    data["land"] = land
+    data["type"] = "overnatting"
+    data["source_type"] = "hotel"
+    if not (data.get("beskrivelse") or data.get("description") or "").strip():
+        data["beskrivelse"] = (
+            rå_hotell.get("hvorfor")
+            or rå_hotell.get("why")
+            or rå_hotell.get("beskrivelse")
+            or rå_hotell.get("description")
+            or navn
+        )
+    kandidat = _normaliser_agent_perle(data, json.dumps(data, ensure_ascii=False))
+    if not kandidat:
+        return None
+    kandidat["type"] = "overnatting"
+    kandidat["source_type"] = "hotel"
+    ai_score = rå_hotell.get("saerhetsscore", rå_hotell.get("uniqueness_score"))
+    if ai_score is not None:
+        kandidat["saerhetsscore"] = _normaliser_saerhetsscore(ai_score, "")
+    pris = (rå_hotell.get("pris") or rå_hotell.get("price") or "").strip()
+    if pris:
+        kandidat["pris"] = pris
+    return kandidat
+
+
+def _normaliser_helgeby_hoteller(rå, by, land, omrade=""):
+    hoteller = []
+    for rå_hotell in _hent_helgeby_hotell_liste_fra_rå(rå):
+        hotell = _normaliser_helgeby_hotell(rå_hotell, by, land, omrade)
+        if hotell:
+            hoteller.append(hotell)
+    return hoteller
+
+
+def _godkjent_helgeby_hotell(hotell, strict_mode=False):
+    """Helgeby-hotell: litt mildere enn generell overnatting, men fortsatt unike steder."""
+    from place_quality import er_kjede_hotell, tekst_for_sted_sjekk
+
+    if not isinstance(hotell, dict) or hotell.get("source_type") != "hotel":
+        return False
+    tekst = tekst_for_sted_sjekk(hotell)
+    if er_kjede_hotell(tekst):
+        return False
+    if hotell.get("saerhetsscore", 0) < MIN_UNIKHETSGRAD:
+        return False
+    min_besk = 25 if strict_mode else 15
+    if len((hotell.get("beskrivelse") or "").strip()) < min_besk:
+        return False
+    return True
+
+
+def _helgeby_hoteller_passer(hoteller, strict_mode=False):
+    """Krever nøyaktig to ulike, godkjente overnattingssteder."""
+    if not isinstance(hoteller, list) or len(hoteller) != 2:
+        return False
+    navn_set = set()
+    for hotell in hoteller:
+        if not _godkjent_helgeby_hotell(hotell, strict_mode):
+            return False
+        navn_key = _slug_tekst(hotell.get("navn", ""))
+        if not navn_key or navn_key in navn_set:
+            return False
+        navn_set.add(navn_key)
+    return True
+
+
 def _normaliser_helgeby_kandidat(rå, omrade=""):
     data = _berik_rå_helgeby_kandidat(rå, omrade)
     kandidat = _normaliser_agent_perle(data, json.dumps(data, ensure_ascii=False))
@@ -1323,23 +1564,32 @@ def _normaliser_helgeby_kandidat(rå, omrade=""):
     else:
         kandidat["highlights"] = []
     kandidat["beste_tid"] = (rå.get("beste_tid") or rå.get("best_time") or "").strip()
+    kandidat["hoteller"] = _normaliser_helgeby_hoteller(
+        rå, kandidat["by"], kandidat["land"], omrade
+    )
     return kandidat
 
 
-def _helgeby_passer_kvalitet(kandidat, strict_mode=False):
+def _helgeby_kvalitet_grunn(kandidat, strict_mode=False):
     if _er_mainstream_turistdestinasjon(kandidat):
-        return False
+        return "mainstream"
     if _er_blant_landets_storste_byer(kandidat):
-        return False
+        return "storby"
     if _er_velbesokt_museum(kandidat):
-        return False
+        return "score"
     if kandidat.get("saerhetsscore", 0) < MIN_UNIKHETSGRAD:
-        return False
+        return "score"
     beskrivelse = (kandidat.get("beskrivelse") or kandidat.get("hvorfor_helg") or "").strip()
     min_len = 50 if strict_mode else 35
     if len(beskrivelse) < min_len:
-        return False
-    return True
+        return "score"
+    if not _helgeby_hoteller_passer(kandidat.get("hoteller"), strict_mode):
+        return "hotell"
+    return None
+
+
+def _helgeby_passer_kvalitet(kandidat, strict_mode=False):
+    return _helgeby_kvalitet_grunn(kandidat, strict_mode) is None
 
 
 def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
@@ -1351,16 +1601,35 @@ def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
     antall = max(2, min(10, int(antall)))
     profil = _normaliser_profil(st.session_state.get("profil"))
     interesse = profil.get("hovedinteresse", "Kultur & Historie")
+    hotell_min = MIN_UNIKHETSGRAD
+    hotell_json = (
+        '"hoteller":[{"navn":"Unique stay name","beskrivelse":"Why it is special and worth a weekend stay...",'
+        '"saerhetsscore":' + str(hotell_min) + ',"pris":"EUR 95","type":"overnatting","source_type":"hotel"},'
+        '{"navn":"Second unique stay","beskrivelse":"A different style of lodging with local character...",'
+        '"saerhetsscore":' + str(hotell_min) + ',"pris":"EUR 110","type":"overnatting","source_type":"hotel"}]'
+    )
+
+    helgeby_json_eksempel = (
+        '{"helgebyer":[{"navn":"Town name","land":"Country","beskrivelse":"...",'
+        '"hvorfor_helg":"Why it works for a weekend","saerhetsscore":'
+        + str(MIN_UNIKHETSGRAD)
+        + ',"highlights":["walk","food","nature"],"beste_tid":"May–Sep","type":"by",'
+        + hotell_json
+        + "}]}"
+    )
 
     if _spraak == "EN":
         system_prompt = (
             "You find off-the-beaten-path towns and small cities in Europe worth a 2–3 night weekend. "
             "Return strict JSON only: "
-            '{"helgebyer":[{"navn":"Town name","land":"Country","beskrivelse":"...",'
-            f'"hvorfor_helg":"Why it works for a weekend","saerhetsscore":{MIN_UNIKHETSGRAD},'
-            '"highlights":["walk","food","nature"],"beste_tid":"May–Sep","type":"by"}]} '
+            + helgeby_json_eksempel
+            + " "
             f"Suggest exactly {antall} towns with saerhetsscore>={MIN_UNIKHETSGRAD}. "
             "Each entry must be a whole town/city (navn = by). "
+            f"Each town MUST include exactly 2 completely different unique stays in hoteller "
+            f"(source_type hotel, type overnatting, saerhetsscore>={hotell_min}, no chains, "
+            "quirky/historic/design — e.g. parsonage, cave hotel, lighthouse). "
+            "The two hotels must be genuinely different places, not the same brand or property. "
             "Prefer walkable old towns, local food, nature nearby, festivals or crafts — "
             "places with real character but NOT mass tourism. "
             "NEVER suggest capitals or bucket-list cities (Paris, Rome, Barcelona, Amsterdam, Venice, Prague, etc.). "
@@ -1369,14 +1638,25 @@ def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
         )
         user_prompt = f"Region: {omrade}. Number of towns: {antall}."
     else:
+        helgeby_json_eksempel = (
+            '{"helgebyer":[{"navn":"Bynavn","land":"Land","beskrivelse":"...",'
+            '"hvorfor_helg":"Hvorfor det passer som helg","saerhetsscore":'
+            + str(MIN_UNIKHETSGRAD)
+            + ',"highlights":["gåtur","mat","natur"],"beste_tid":"mai–sep","type":"by",'
+            + hotell_json
+            + "}]}"
+        )
         system_prompt = (
             "Du finner off-the-beaten-path byer og tettsteder i Europa som er verdt en helg (2–3 netter). "
             "Returner kun gyldig JSON: "
-            '{"helgebyer":[{"navn":"Bynavn","land":"Land","beskrivelse":"...",'
-            f'"hvorfor_helg":"Hvorfor det passer som helg","saerhetsscore":{MIN_UNIKHETSGRAD},'
-            '"highlights":["gåtur","mat","natur"],"beste_tid":"mai–sep","type":"by"}]} '
+            + helgeby_json_eksempel
+            + " "
             f"Foreslå nøyaktig {antall} byer med saerhetsscore>={MIN_UNIKHETSGRAD}. "
             "Hvert forslag skal være en hel by (navn = by). "
+            f"Hver by MÅ ha nøyaktig 2 helt ulike overnattingssteder i hoteller-listen "
+            f"(source_type hotel, type overnatting, saerhetsscore>={hotell_min}, ingen kjeder, "
+            "særegen historie/design — f.eks. prestegård, grottehotell, fyrvokterbolig). "
+            "De to hotellene skal være forskjellige steder, ikke samme merke eller eiendom. "
             "Prioriter gåbare gamlebyer, lokal mat, natur i nærheten, håndverk eller festivaler — "
             "steder med sjel, men IKKE masseturisme. "
             "ALDRI foreslå hovedsteder eller bucket-list-byer (Paris, Roma, Barcelona, Amsterdam, Venezia, Praha osv.). "
@@ -1392,7 +1672,7 @@ def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
             {"role": "user", "content": user_prompt},
         ],
         "temperature": 0.45,
-        "max_tokens": min(4096, 400 + antall * 380),
+        "max_tokens": min(4096, 500 + antall * 720),
         "response_format": {"type": "json_object"},
     }
     try:
@@ -1421,6 +1701,7 @@ def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
     godkjente = []
     forkastet_mainstream = 0
     forkastet_storby = 0
+    forkastet_hotell = 0
     forkastet_score = 0
     forkastet_normalisering = 0
     kandidater_for_geo = []
@@ -1436,11 +1717,14 @@ def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
         ai_score = rå.get("saerhetsscore", rå.get("uniqueness_score"))
         if ai_score is not None:
             kandidat["saerhetsscore"] = _normaliser_saerhetsscore(ai_score, "")
-        if not _helgeby_passer_kvalitet(kandidat, strict_mode):
-            if _er_mainstream_turistdestinasjon(kandidat):
+        grunn = _helgeby_kvalitet_grunn(kandidat, strict_mode)
+        if grunn:
+            if grunn == "mainstream":
                 forkastet_mainstream += 1
-            elif _er_blant_landets_storste_byer(kandidat):
+            elif grunn == "storby":
                 forkastet_storby += 1
+            elif grunn == "hotell":
+                forkastet_hotell += 1
             else:
                 forkastet_score += 1
             continue
@@ -1480,6 +1764,7 @@ def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
         "godkjent": len(godkjente),
         "forkastet_mainstream": forkastet_mainstream,
         "forkastet_storby": forkastet_storby,
+        "forkastet_hotell": forkastet_hotell,
         "forkastet_score": forkastet_score,
         "forkastet_normalisering": forkastet_normalisering,
         "tid_total_s": round(time.perf_counter() - total_start, 3),
@@ -1513,10 +1798,13 @@ def generer_reiseekspert_stream(sporsmal, kontekst=""):
     if _spraak == "EN":
         json_instruks = (
             "Always end your answer with this exact line on its own: ||PERLE_JSON|| "
-            "Then one line of valid JSON (no markdown) like: "
-            '{"perle":{"navn":"...","by":"...","land":"...","beskrivelse":"...","saerhetsscore":8,'
-            '"type":"kultur","source_type":"hidden_gem"}}. '
-            f"Use saerhetsscore below {MIN_UNIKHETSGRAD} for mainstream places. Pick one main recommendation."
+            "Then one line of valid JSON (no markdown). Pick one main recommendation and match source_type: "
+            '{"perle":{"navn":"...","by":"...","land":"...","beskrivelse":"...","saerhetsscore":9,'
+            '"type":"kultur","source_type":"hidden_gem"}} OR for a stay: '
+            '{"perle":{"navn":"...","by":"...","land":"...","beskrivelse":"...","saerhetsscore":9,'
+            '"type":"overnatting","source_type":"hotel","pris":"EUR 95"}} OR for food: '
+            '"type":"gastronomi","source_type":"restaurant". '
+            f"Use saerhetsscore below {MIN_UNIKHETSGRAD} for mainstream places."
         )
         system_melding = (
             "You are the AI agent for Hidden Europe: hidden gems and eccentric destinations. "
@@ -1532,10 +1820,13 @@ def generer_reiseekspert_stream(sporsmal, kontekst=""):
     else:
         json_instruks = (
             "Avslutt ALLTID svaret med nøyaktig denne linjen alene: ||PERLE_JSON|| "
-            "Deretter én linje gyldig JSON (uten markdown), f.eks.: "
-            '{"perle":{"navn":"...","by":"...","land":"...","beskrivelse":"...","saerhetsscore":8,'
-            '"type":"kultur","source_type":"hidden_gem"}}. '
-            f"Bruk saerhetsscore under {MIN_UNIKHETSGRAD} for mainstream-steder. Velg én hovedanbefaling."
+            "Deretter én linje gyldig JSON (uten markdown). Velg én hovedanbefaling og riktig source_type: "
+            '{"perle":{"navn":"...","by":"...","land":"...","beskrivelse":"...","saerhetsscore":9,'
+            '"type":"kultur","source_type":"hidden_gem"}} ELLER for overnatting: '
+            '{"perle":{"navn":"...","by":"...","land":"...","beskrivelse":"...","saerhetsscore":9,'
+            '"type":"overnatting","source_type":"hotel","pris":"EUR 95"}} ELLER for mat: '
+            '"type":"gastronomi","source_type":"restaurant". '
+            f"Bruk saerhetsscore under {MIN_UNIKHETSGRAD} for mainstream-steder."
         )
         system_melding = (
             "Du er KI-agenten for Hemmelige Europa: skjulte perler og eksentriske reisemål. "
@@ -2778,6 +3069,8 @@ with fane_helgeby:
         if not omrade:
             st.error(tr("helgeby_feil_omrade"))
         else:
+            st.session_state.pop("helgeby_kandidater", None)
+            st.session_state.pop("helgeby_rapport", None)
             try:
                 with st.spinner(tr("helgeby_spinner").format(omrade)):
                     kandidater, rapport = sanke_helgebyer_for_omrade(
@@ -2799,9 +3092,15 @@ with fane_helgeby:
                 helgeby_rapport.get("godkjent", 0),
                 helgeby_rapport.get("forkastet_mainstream", 0),
                 helgeby_rapport.get("forkastet_storby", 0),
+                helgeby_rapport.get("forkastet_hotell", 0),
                 helgeby_rapport.get("forkastet_score", 0),
             )
         )
+
+    if helgeby_kandidater and not any(
+        isinstance(k.get("hoteller"), list) and k["hoteller"] for k in helgeby_kandidater
+    ):
+        st.warning(tr("helgeby_hotell_stale"))
 
     if helgeby_kandidater:
         for idx, kandidat in enumerate(helgeby_kandidater):
@@ -2825,6 +3124,30 @@ with fane_helgeby:
                     )
                 if kandidat.get("beste_tid"):
                     st.caption(tr("helgeby_beste_tid") + ": " + kandidat["beste_tid"])
+                hoteller = kandidat.get("hoteller") or []
+                st.subheader(tr("helgeby_hoteller"))
+                if not hoteller:
+                    st.caption(tr("helgeby_hotell_mangler"))
+                for h_idx, hotell in enumerate(hoteller):
+                    with st.container(border=True):
+                        pris = (hotell.get("pris") or "").strip()
+                        pris_del = f" · {pris}" if pris else ""
+                        st.markdown(
+                            f"**{hotell.get('navn', '')}** · "
+                            f"{tr('helgeby_hotell_unikhet').format(hotell.get('saerhetsscore', 0))}"
+                            f"{pris_del}"
+                        )
+                        if hotell.get("beskrivelse"):
+                            st.write(hotell["beskrivelse"])
+                        if st.button(
+                            tr("helgeby_lagre_hotell"),
+                            key=f"helgeby_hotel_{idx}_{h_idx}_{hotell['agent_id']}",
+                            use_container_width=True,
+                        ):
+                            lagret = lagre_agent_perle_i_db(hotell)
+                            _legg_lagret_sted_i_lokale_lister(lagret)
+                            st.toast(tr("chat_lagre_toast"))
+                            st.rerun()
                 col_plan, col_db = st.columns([1, 1])
                 with col_plan:
                     render_reiseplan_knapp_agent(
@@ -3134,16 +3457,23 @@ with fane3:
                         st.write(kandidat["beskrivelse"])
                     if kandidat.get("latitude") is None or kandidat.get("longitude") is None:
                         st.caption(tr("sank_uten_koordinater"))
+                    lagringsstatus = kandidat.get("lagringsstatus") or _kandidat_lagringsstatus(
+                        kandidat
+                    )
+                    if lagringsstatus.get("melding_nokkel") and (
+                        lagringsstatus.get("allerede_synlig") or lagringsstatus.get("erstatter")
+                    ):
+                        st.caption(tr(lagringsstatus["melding_nokkel"]))
                     col_plan, col_db = st.columns([1, 1])
                     with col_plan:
                         render_reiseplan_knapp_agent(
                             kandidat, f"sank_{idx}_{kandidat['agent_id']}"
                         )
                     with col_db:
-                        if kandidat.get("allerede_i_db"):
-                            st.caption(tr("sank_allerede_i_db"))
+                        if lagringsstatus.get("allerede_synlig"):
+                            pass
                         elif st.button(
-                            tr("chat_lagre_db"),
+                            _chat_lagre_tekster(kandidat)[0],
                             key=f"sank_save_{idx}_{kandidat['agent_id']}",
                             use_container_width=True,
                         ):
@@ -3153,7 +3483,7 @@ with fane3:
                             st.session_state["sank_kandidater"] = [
                                 k for k in rest if k.get("agent_id") != kandidat.get("agent_id")
                             ]
-                            st.toast(tr("chat_lagre_toast"))
+                            st.toast(_chat_lagre_tekster(kandidat)[1])
                             st.rerun()
         elif sank_rapport and sank_rapport.get("godkjent", 0) == 0:
             if sank_rapport.get("foreslaatt", 0) == 0:
@@ -3257,7 +3587,9 @@ with fane3:
                 and kandidat.get("saerhetsscore", 0) >= MIN_UNIKHETSGRAD
             ):
                 render_chat_agent_perle_handlinger(
-                    kandidat, f"hist_{kandidat['agent_id']}_{loop_index}"
+                    kandidat,
+                    f"hist_{kandidat['agent_id']}_{loop_index}",
+                    melding.get("content", ""),
                 )
 
     with st.form("reise_chat_skjema", clear_on_submit=True):
@@ -3338,7 +3670,9 @@ with fane3:
                 )
             if agent_perle and agent_perle.get("saerhetsscore", 0) >= MIN_UNIKHETSGRAD:
                 render_chat_agent_perle_handlinger(
-                    agent_perle, f"live_{agent_perle['agent_id']}"
+                    agent_perle,
+                    f"live_{agent_perle['agent_id']}",
+                    fullt_svar or "",
                 )
 
         st.session_state.reise_chat.append(

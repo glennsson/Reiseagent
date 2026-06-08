@@ -34,6 +34,7 @@ __all__ = [
     "_RESTAURANT_STERKE_ORD",
     "effektiv_saerhetsscore",
     "er_ki_eller_agent_lagret",
+    "er_agent_forslag",
     "er_kjede_hotell",
     "er_kjede_restaurant",
     "er_kuratert_seed",
@@ -532,6 +533,14 @@ def er_ki_eller_agent_lagret(sted: Dict) -> bool:
     return any(markor in blob for markor in _KI_LAGRET_MARKORER)
 
 
+def er_agent_forslag(kandidat: Dict) -> bool:
+    """KI-forslag fra chat, sanking eller helgeby (før tips er satt ved lagring)."""
+    if kandidat.get("agent_id"):
+        return True
+    blob = f"{kandidat.get('navn', '')} {kandidat.get('beskrivelse', '')} {kandidat.get('id', '')}".lower()
+    return "agent-" in blob or "ki-agent" in blob
+
+
 def effektiv_saerhetsscore(sted: Dict) -> int:
     eksplisitt = _hent_lagret_saerhetsscore(sted)
     if eksplisitt is not None:
@@ -633,9 +642,18 @@ def godkjent_hotel_kandidat(
     tekst = tekst_for_sted_sjekk(kandidat)
     if er_kjede_hotell(tekst):
         return False
-    if kandidat.get("saerhetsscore", 0) < HOTELL_MIN_UNIKHETSGRAD:
+    score = effektiv_saerhetsscore(kandidat)
+    if er_ki_eller_agent_lagret(kandidat) or er_agent_forslag(kandidat):
+        min_score = MIN_UNIKHETSGRAD
+        min_besk = 15
+    elif for_sank:
+        min_score = MIN_UNIKHETSGRAD
+        min_besk = SANK_HOTELL_MIN_BESKRIVELSE
+    else:
+        min_score = HOTELL_MIN_UNIKHETSGRAD
+        min_besk = 35
+    if score < min_score:
         return False
-    min_besk = SANK_HOTELL_MIN_BESKRIVELSE if for_sank else 35
     if len((kandidat.get("beskrivelse") or "").strip()) < min_besk:
         return False
     return True

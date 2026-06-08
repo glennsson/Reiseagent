@@ -197,6 +197,8 @@ def normalize_place(sted, source_type):
         "image_url": sted.get("image_url", ""),
         "source_type": source_type,
     }
+    if sted.get("saerhetsscore") is not None:
+        place["saerhetsscore"] = sted["saerhetsscore"]
     place["search_key"] = " ".join(
         [
             place["navn"],
@@ -288,6 +290,8 @@ def _row_to_place(row):
             raw = json.loads(row[14])
             place["profil_kategori"] = raw.get("profil_kategori", "") or ""
             place["image_url"] = raw.get("image_url", "") or ""
+            if raw.get("saerhetsscore") is not None:
+                place["saerhetsscore"] = raw["saerhetsscore"]
         except (json.JSONDecodeError, TypeError):
             pass
     return place
