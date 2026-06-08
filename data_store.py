@@ -222,6 +222,23 @@ def hent_kuratert_overnatting_db():
     return [normalize_place(p, "hotel") for p in _hent_overnatting_kilde()]
 
 
+def _perle_lagringsnokkel(navn, by, land):
+    return f"{(navn or '').strip().lower()}|{(by or '').strip().lower()}|{(land or '').strip().lower()}"
+
+
+def _fjern_perle_duplikater_av_kuratert_overnatting(conn, hotell_places):
+    """Fjerner feilklassifiserte perler som matcher kuratert overnatting (samme navn+sted)."""
+    hotell_nokler = {
+        _perle_lagringsnokkel(p["navn"], p["by"], p["land"]) for p in hotell_places
+    }
+    rows = conn.execute(
+        "SELECT id, name, city, country, source_type FROM places WHERE source_type != 'hotel'"
+    ).fetchall()
+    for row in rows:
+        if _perle_lagringsnokkel(row[1], row[2], row[3]) in hotell_nokler:
+            conn.execute("DELETE FROM places WHERE id = ?", (row[0],))
+
+
 def seed_places():
     init_db()
     skjulte_kilde = list(SKJULTE_PERLER) + _spania_skjulte_perler()
@@ -236,6 +253,7 @@ def seed_places():
         conn.execute(
             "DELETE FROM places WHERE id LIKE '%rostiga-roadtrips%'"
         )
+        _fjern_perle_duplikater_av_kuratert_overnatting(conn, hotell_places)
         for place in places:
             conn.execute(
                 """

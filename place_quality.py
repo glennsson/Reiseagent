@@ -528,6 +528,18 @@ def er_kuratert_seed(sted: Dict) -> bool:
     return False
 
 
+def effektiv_kilde_type(sted: Dict) -> str:
+    """type-felt (f.eks. overnatting) veier tyngre enn feil source_type i lagret JSON."""
+    if not sted:
+        return "hidden_gem"
+    type_hint = (sted.get("type") or "").strip().lower()
+    if type_hint in ("hotell", "hotel", "overnatting", "lodging"):
+        return "hotel"
+    if type_hint in ("gastronomi", "restaurant", "mat"):
+        return "restaurant"
+    return (sted.get("source_type") or "hidden_gem").strip().lower()
+
+
 def er_ki_eller_agent_lagret(sted: Dict) -> bool:
     blob = f"{sted.get('tips', '')} {sted.get('beskrivelse', '')}".lower()
     return any(markor in blob for markor in _KI_LAGRET_MARKORER)
@@ -687,7 +699,7 @@ def _med_score(sted: Dict) -> Dict:
 def oppfyller_visning_kriterier(sted: Dict, strict_mode: bool = False) -> bool:
     """Samme regler som KI-sanking, tilpasset kuratert vs. KI-lagret innhold."""
     med = _med_score(sted)
-    source = med.get("source_type", "hidden_gem")
+    source = effektiv_kilde_type(med)
 
     if source == "hotel":
         return godkjent_hotel_kandidat(med, strict_mode=strict_mode)

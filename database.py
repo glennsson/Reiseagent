@@ -324,6 +324,18 @@ UNIKE_OVERNATTING = [
         "latitude": 52.9133,
         "longitude": -4.0994,
     },
+    {
+        "navn": "Hotel Quadrille",
+        "land": "Polen",
+        "by": "Gdynia",
+        "type": "overnatting",
+        "beskrivelse": "Voksenhotell i restaurert 1700-tallspalé med Alice i Eventyrland-tema — et av få Relais & Châteaux-hotell i Polen, langt fra kjedene i Tri-byen.",
+        "tips": "Velg et av forfatternavn-rommene og avslutt med tastingmeny på White Rabbit Restaurant i parken.",
+        "beste_tid": "mai-september",
+        "pris": "ca. 280 € dobbeltrom",
+        "latitude": 54.481090,
+        "longitude": 18.540057,
+    },
 ]
 
 # Bakoverkompatibilitet (eldre imports: from database import UNIKE_HOTELLER)

@@ -75,6 +75,21 @@ def _sla_sammen_steder_etter_id(*lister):
     return list(by_id.values())
 
 
+def _sla_sammen_steder_etter_nokkel(*lister):
+    """Slår sammen steder; første forekomst av navn+by+land vinner."""
+    by_key = {}
+    for liste in lister:
+        for sted in liste:
+            key = (
+                f"{(sted.get('navn') or '').strip().lower()}|"
+                f"{(sted.get('by') or '').strip().lower()}|"
+                f"{(sted.get('land') or '').strip().lower()}"
+            )
+            if key not in by_key:
+                by_key[key] = sted
+    return list(by_key.values())
+
+
 def _hent_kuratert_overnatting_for_visning():
     """Kuratert overnatting fra database.py (leser fersk liste, ingen privat data_store-import)."""
     import importlib
@@ -91,13 +106,24 @@ def _hent_kuratert_overnatting_for_visning():
 
 def _last_lokale_stedlister():
     """Oppfrisker lister fra SQLite ved hver Streamlit-kjøring."""
+    from place_quality import effektiv_kilde_type
+
     seed_places()
     kuratert_overnatting = _hent_kuratert_overnatting_for_visning()
-    fra_db_overnatting = filtrer_steder_for_app(get_places("hotel"))
+    alle_db = get_places(seed=False)
     return (
-        filtrer_steder_for_app(get_places("hidden_gem")),
-        filtrer_steder_for_app(get_places("restaurant")),
-        _sla_sammen_steder_etter_id(kuratert_overnatting, fra_db_overnatting),
+        filtrer_steder_for_app(
+            [s for s in alle_db if effektiv_kilde_type(s) == "hidden_gem"]
+        ),
+        filtrer_steder_for_app(
+            [s for s in alle_db if effektiv_kilde_type(s) == "restaurant"]
+        ),
+        _sla_sammen_steder_etter_nokkel(
+            kuratert_overnatting,
+            filtrer_steder_for_app(
+                [s for s in alle_db if effektiv_kilde_type(s) == "hotel"]
+            ),
+        ),
     )
 
 
@@ -895,7 +921,7 @@ def _berik_agent_kandidat_for_lagring(kandidat):
 
 def _chat_lagre_tekster(kandidat):
     """Knapp- og toast-tekst avhengig av hva som lagres."""
-    source = (kandidat or {}).get("source_type", "hidden_gem")
+    source = _effektiv_kilde_type(kandidat)
     if source == "hotel":
         return tr("chat_lagre_hotell"), tr("chat_lagre_toast_hotell")
     if source == "restaurant":
@@ -1014,6 +1040,7 @@ def render_chat_agent_perle_handlinger(kandidat, key_suffix, chat_tekst=""):
 
 def lagre_agent_perle_i_db(kandidat):
     """Lagrer agent-forslag permanent i places-tabellen."""
+    kandidat = _synk_kandidat_kilde_type(dict(kandidat))
     kandidat = _berik_agent_kandidat_for_lagring(kandidat)
     if kandidat.get("source_type") == "restaurant" and not _godkjent_restaurant_kandidat(
         kandidat, False
@@ -1099,14 +1126,9 @@ def _perle_nokkel(navn, by, land):
 
 def _effektiv_kilde_type(kandidat):
     """type-felt fra KI (f.eks. overnatting) veier tyngre enn feil source_type i JSON."""
-    if not kandidat:
-        return "hidden_gem"
-    type_hint = (kandidat.get("type") or "").strip().lower()
-    if type_hint in ("hotell", "hotel", "overnatting", "lodging"):
-        return "hotel"
-    if type_hint in ("gastronomi", "restaurant", "mat"):
-        return "restaurant"
-    return (kandidat.get("source_type") or "hidden_gem").strip().lower()
+    from place_quality import effektiv_kilde_type
+
+    return effektiv_kilde_type(kandidat)
 
 
 def _kilde_type_visning(kandidat):
