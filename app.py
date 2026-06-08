@@ -13,6 +13,7 @@ from streamlit_js_eval import get_geolocation
 
 import html
 import math
+import unicodedata
 from data_store import (
     add_itinerary_item,
     get_connection,
@@ -2490,6 +2491,48 @@ def filtrer_data(data):
     ]
 
 
+def _normaliser_for_sok(tekst):
+    """Aksent-uavhengig søk (malaga matcher Málaga)."""
+    tekst = (tekst or "").lower().strip()
+    tekst = unicodedata.normalize("NFD", tekst)
+    return "".join(c for c in tekst if unicodedata.category(c) != "Mn")
+
+
+def _sted_matcher_sok(sted, soketekst):
+    if not soketekst:
+        return True
+    norm_sok = _normaliser_for_sok(soketekst)
+    if not norm_sok:
+        return True
+    blob = _normaliser_for_sok(
+        " ".join(
+            str(sted.get(felt, "") or "")
+            for felt in ("navn", "by", "land", "beskrivelse")
+        )
+    )
+    return norm_sok in blob
+
+
+def _filtrer_perler_liste(soketekst, type_filter, alle_type_label, radar_treff):
+    """Perlesøk i hele databasen; uten søk vises kun radartreff (skjulte perler)."""
+    if soketekst or type_filter != alle_type_label:
+        kandidater = SKJULTE_PERLER_DB
+    else:
+        kandidater = [
+            treff["data"]
+            for treff in radar_treff
+            if _effektiv_kilde_type(treff["data"]) == "hidden_gem"
+        ]
+    filtrert = []
+    for perle in kandidater:
+        if type_filter != alle_type_label and perle.get("type") != type_filter:
+            continue
+        if not _sted_matcher_sok(perle, soketekst):
+            continue
+        filtrert.append(perle)
+    return filtrert
+
+
 def _aktiv_hovedinteresse():
     return _normaliser_profil(st.session_state.get("profil"))["hovedinteresse"]
 
@@ -3081,30 +3124,46 @@ with fane0:
         st.write("---")
         col_s1, col_s2 = st.columns(2)
         with col_s1:
-            sok_perle = st.text_input(T["perler_sok"], "", key="perler_sok_input").lower()
+            sok_perle = st.text_input(T["perler_sok"], "", key="perler_sok_input").strip()
         with col_s2:
-            alle_typer = sorted({p["type"] for p in treff_steder}) if treff_steder else sorted(
-                {p["type"] for p in SKJULTE_PERLER_DB}
-            )
+            alle_typer = sorted({p["type"] for p in SKJULTE_PERLER_DB})
             type_perle = st.selectbox(
                 T["perler_sorter_type"],
                 [T["perler_alle"]] + alle_typer,
                 key="perler_type_filter",
             )
 
-        filtrerte_perler = []
-        for treff in radar_treff:
-            perle = treff["data"]
-            if type_perle != T["perler_alle"] and perle["type"] != type_perle:
-                continue
-            if sok_perle and (
-                sok_perle not in perle["navn"].lower()
-                and sok_perle not in perle["by"].lower()
-            ):
-                continue
-            filtrerte_perler.append(perle)
-
+        filtrerte_perler = _filtrer_perler_liste(
+            sok_perle, type_perle, T["perler_alle"], radar_treff
+        )
         filtrerte_perler = sorter_steder_etter_profil(filtrerte_perler)
+
+        if sok_perle:
+            sok_med_koords = filtrer_data(filtrerte_perler)
+            if sok_med_koords:
+                sok_treff = [{"data": p, "avstand": 0} for p in sok_med_koords]
+                lat_snitt = sum(float(p["latitude"]) for p in sok_med_koords) / len(
+                    sok_med_koords
+                )
+                lon_snitt = sum(float(p["longitude"]) for p in sok_med_koords) / len(
+                    sok_med_koords
+                )
+                st.caption(
+                    tr("perler_sok_kart").format(len(sok_med_koords), sok_perle)
+                )
+                sok_kart = lag_radar_kart(
+                    sok_treff,
+                    sentrum=(lat_snitt, lon_snitt),
+                    sentrum_navn=sok_perle,
+                    zoom_start=10 if len(sok_med_koords) == 1 else 8,
+                )
+                st_folium(
+                    sok_kart,
+                    width="stretch",
+                    height=360,
+                    returned_objects=[],
+                    key="perler_sok_folium_kart",
+                )
 
         if filtrerte_perler:
             for i in range(0, len(filtrerte_perler), 3):
@@ -3129,6 +3188,10 @@ with fane0:
                             render_reiseplan_knapp(p, view_key, index=i + j)
         else:
             st.info(T["perler_ingen_treff"])
+            if sok_perle and any(
+                _sted_matcher_sok(s, sok_perle) for s in LOKALE_SPISESTEDER_DB
+            ):
+                st.caption(tr("perler_sok_mat_hint").format(sok_perle))
 
 
 # --- FANE: HELGEBY ---
@@ -3287,7 +3350,7 @@ with fane1:
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
-        sok_mat = st.text_input(T["mat_sok"], "", key="mat_sok_input").lower()
+        sok_mat = st.text_input(T["mat_sok"], "", key="mat_sok_input").strip()
     with col_m2:
         type_mat = st.selectbox(
             T["mat_sorter_type"],
@@ -3302,9 +3365,7 @@ with fane1:
     for sted in LOKALE_SPISESTEDER_DB:
         if type_mat != T["perler_alle"] and sted["type"] != type_mat:
             continue
-        if sok_mat and (
-            sok_mat not in sted["navn"].lower() and sok_mat not in sted["by"].lower()
-        ):
+        if not _sted_matcher_sok(sted, sok_mat):
             continue
         filtrert_mat.append(sted)
 
@@ -3362,7 +3423,7 @@ with fane2:
 
     col_h1, col_h2 = st.columns(2)
     with col_h1:
-        sok_hotell = st.text_input(tr("hotell_sok"), "", key="hotell_sok_input").lower()
+        sok_hotell = st.text_input(tr("hotell_sok"), "", key="hotell_sok_input").strip()
     with col_h2:
         type_valg = [T["perler_alle"]] + sorted(
             {m["type"] for m in LOKALE_HOTELLER_DB if m.get("type")}
@@ -3379,9 +3440,7 @@ with fane2:
     for sted in LOKALE_HOTELLER_DB:
         if not _matcher_overnatting_type(type_hotell, sted.get("type")):
             continue
-        if sok_hotell and (
-            sok_hotell not in sted["navn"].lower() and sok_hotell not in sted["by"].lower()
-        ):
+        if not _sted_matcher_sok(sted, sok_hotell):
             continue
         filtrert_hotell.append(sted)
 
