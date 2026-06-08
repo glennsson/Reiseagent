@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from database import LOKALE_SPISESTEDER, SKJULTE_PERLER
+from database import LOKALE_SPISESTEDER, SKJULTE_PERLER, UNIKE_OVERNATTING
 from data_store import normalize_place
 from place_images import hent_sted_bilde_url
 
@@ -25,7 +25,11 @@ def main():
     out = {}
     if OUT.is_file():
         out = json.loads(OUT.read_text(encoding="utf-8"))
-    kilder = [(SKJULTE_PERLER, "hidden_gem"), (LOKALE_SPISESTEDER, "restaurant")]
+    kilder = [
+        (SKJULTE_PERLER, "hidden_gem"),
+        (LOKALE_SPISESTEDER, "restaurant"),
+        (UNIKE_OVERNATTING, "hotel"),
+    ]
     for liste, source_type in kilder:
         for rå in liste:
             sted = normalize_place(rå, source_type)

@@ -177,6 +177,13 @@ def _get_preloaded_images():
     return _PRELOADED_IMAGES_CACHE
 
 
+def preloaded_image_for_place_id(place_id):
+    """Returnerer forhåndslagret bilde-URL for et sted, eller tom streng."""
+    if not place_id:
+        return ""
+    return _get_preloaded_images().get(place_id, "") or ""
+
+
 def normalize_place(sted, source_type):
     country = sted.get("land", "")
     country_code = sted.get("country_code", LAND_KODER.get(country, ""))
@@ -391,69 +398,3 @@ def log_affiliate_click(place, source_view, language, url):
         )
         conn.commit()
 
-
-
-def get_affiliate_stats(limit=5):
-    init_db()
-    with get_connection() as conn:
-        total_clicks = conn.execute("SELECT COUNT(*) FROM affiliate_clicks").fetchone()[0]
-        top_places = conn.execute(
-            """
-            SELECT place_name, city, country, COUNT(*) as clicks
-            FROM affiliate_clicks
-            GROUP BY place_id, place_name, city, country
-            ORDER BY clicks DESC, place_name
-            LIMIT ?
-            """,
-            (limit,),
-        ).fetchall()
-        top_sources = conn.execute(
-            """
-            SELECT source_view, COUNT(*) as clicks
-            FROM affiliate_clicks
-            GROUP BY source_view
-            ORDER BY clicks DESC, source_view
-            """
-        ).fetchall()
-        top_partners = conn.execute(
-            """
-            SELECT
-                CASE
-                    WHEN instr(source_view, ':') > 0
-                    THEN substr(source_view, instr(source_view, ':') + 1)
-                    ELSE 'booking'
-                END AS partner,
-                COUNT(*) AS clicks
-            FROM affiliate_clicks
-            GROUP BY partner
-            ORDER BY clicks DESC, partner
-            """
-        ).fetchall()
-        latest_click = conn.execute(
-            "SELECT clicked_at FROM affiliate_clicks ORDER BY clicked_at DESC LIMIT 1"
-        ).fetchone()
-
-    return {
-        "total_clicks": total_clicks,
-        "top_places": [
-            {
-                "place_name": row[0],
-                "city": row[1],
-                "country": row[2],
-                "clicks": row[3],
-            }
-            for row in top_places
-        ],
-        "top_sources": [
-            {
-                "source_view": row[0],
-                "clicks": row[1],
-            }
-            for row in top_sources
-        ],
-        "top_partners": [
-            {"partner": row[0], "clicks": row[1]}
-            for row in top_partners
-        ],
-        "latest_click": latest_click[0] if latest_click else None,
-    }

@@ -13,6 +13,7 @@ from streamlit_js_eval import get_geolocation
 
 import html
 import math
+import random
 import unicodedata
 from data_store import (
     add_itinerary_item,
@@ -24,6 +25,31 @@ from data_store import (
     remove_itinerary_item,
     seed_places,
 )
+from persistence import (
+    PROFIL_BUDSJETT,
+    PROFIL_REISE_FOLGE,
+    STANDARD_PROFIL,
+    lagre_data,
+    last_inn_data,
+    normaliser_profil,
+    persist_reiseplan,
+    sync_reiseplan_to_sqlite,
+)
+from ui_cards import (
+    behandle_affiliate_pending,
+    render_affiliate_lenker as _ui_render_affiliate_lenker,
+    render_travel_card_html as _ui_render_travel_card_html,
+    vis_sted_foto as _ui_vis_sted_foto,
+)
+from kart_utils import (
+    filtrer_data,
+    lag_chat_oppdag_kart,
+    lag_radar_kart,
+    lag_stedskart,
+    optimaliser_reiserute_naermeste_nabo,
+    regn_ut_avstand_km,
+)
+from ui_panels import render_sank_ki_panel as _render_sank_ki_panel
 from translations import TEKSTER
 from place_images import hent_sted_bilde_url
 from transport_planner import (
@@ -131,9 +157,17 @@ def _effektiv_kilde_type(sted):
     return (sted.get("source_type") or "hidden_gem").strip().lower()
 
 
+def _ensure_places_seeded():
+    """Seeder kuratert data én gang per sesjon — ikke ved hver rerun."""
+    if st.session_state.get("_places_seeded"):
+        return
+    seed_places()
+    st.session_state._places_seeded = True
+
+
 def _last_lokale_stedlister():
     """Oppfrisker lister fra SQLite ved hver Streamlit-kjøring."""
-    seed_places()
+    _ensure_places_seeded()
     kuratert_overnatting = _hent_kuratert_overnatting_for_visning()
     alle_db = get_places(seed=False)
     return (
@@ -150,24 +184,6 @@ def _last_lokale_stedlister():
             ),
         ),
     )
-
-
-def regn_ut_avstand_km(lat1, lon1, lat2, lon2):
-    """Regner ut avstanden i kilometer mellom to GPS-koordinater"""
-    R = 6371.0  # Jordens radius i km
-
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-
-    a = (
-        math.sin(dlat / 2) ** 2
-        + math.cos(math.radians(lat1))
-        * math.cos(math.radians(lat2))
-        * math.sin(dlon / 2) ** 2
-    )
-
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
 
 
 _APP_ROOT = Path(__file__).resolve().parent
@@ -239,108 +255,23 @@ def _openrouter_post(payload, timeout=30, *, stream=False):
     return response
 
 # ========================================
-# PERSISTENT LAGRING (HISTORIKK OG CHAT)
+# PERSISTENT LAGRING (CHAT, PROFIL, REISEPLAN)
 # ========================================
-PROFIL_FIL = "reiseprofil.json"
-
-STANDARD_PROFIL = {
-    "reise_folge": "Par",
-    "budsjett": "Medium",
-    "hovedinteresse": "Kultur & Historie",
-}
-
-PROFIL_REISE_FOLGE = ["Singel", "Par", "Familie med barn"]
-PROFIL_BUDSJETT = ["Budsjett", "Medium", "Luksus"]
-PROFIL_INTERESSE = [
-    "Mat & Vin",
-    "Kultur & Historie",
-    "Natur & Aktivitet",
-    "Golf",
-]
-
-
-def _normaliser_profil(profil):
-    """Sikrer at profil-dict har gyldige felt, også ved tom eller ufullstendig JSON."""
-    if not isinstance(profil, dict):
-        return dict(STANDARD_PROFIL)
-
-    def _sikker(verdi, alternativer, standard):
-        return verdi if verdi in alternativer else standard
-
-    # Eldre profiler med «Sport» mappes til nærmeste interesse
-    legacy = profil.get("hovedinteresse")
-    if legacy == "Sport":
-        legacy = "Natur & Aktivitet"
-
-    return {
-        "reise_folge": _sikker(
-            profil.get("reise_folge"), PROFIL_REISE_FOLGE, STANDARD_PROFIL["reise_folge"]
-        ),
-        "budsjett": _sikker(
-            profil.get("budsjett"), PROFIL_BUDSJETT, STANDARD_PROFIL["budsjett"]
-        ),
-        "hovedinteresse": _sikker(
-            legacy,
-            PROFIL_INTERESSE,
-            STANDARD_PROFIL["hovedinteresse"],
-        ),
-    }
-
-
-def last_inn_data():
-    """Henter lagret data fra fil hvis den eksisterer"""
-    default_data = {
-        "reisehistorikk": [],
-        "reise_chat": [],
-        "profil": dict(STANDARD_PROFIL),
-    }
-    if os.path.exists(PROFIL_FIL):
-        try:
-            with open(PROFIL_FIL, "r", encoding="utf-8") as f:
-                innhold = f.read().strip()
-                if not innhold:
-                    return default_data
-                lagret = json.loads(innhold)
-                if not isinstance(lagret, dict):
-                    return default_data
-                if "reisehistorikk" not in lagret or not isinstance(
-                    lagret["reisehistorikk"], list
-                ):
-                    lagret["reisehistorikk"] = []
-                if "reise_chat" not in lagret or not isinstance(lagret["reise_chat"], list):
-                    lagret["reise_chat"] = []
-                lagret["profil"] = _normaliser_profil(lagret.get("profil"))
-                return lagret
-        except Exception:
-            return default_data
-    return default_data
-
-
-def lagre_data(historikk, chat, profil=None):
-    """Lagrer reisehistorikk, chatlogg og reiseprofil til JSON-filen"""
-    try:
-        profil_a_lagre = _normaliser_profil(
-            profil if profil is not None else st.session_state.get("profil", STANDARD_PROFIL)
-        )
-        data_til_lagring = {
-            "reisehistorikk": historikk if isinstance(historikk, list) else [],
-            "reise_chat": chat if isinstance(chat, list) else [],
-            "profil": profil_a_lagre,
-        }
-        with open(PROFIL_FIL, "w", encoding="utf-8") as f:
-            json.dump(data_til_lagring, f, ensure_ascii=False, indent=4)
-    except Exception as e:
-        st.error(f"Kunne ikke lagre data: {e}")
-
+_normaliser_profil = normaliser_profil
 
 # Last inn data ved oppstart og klargjør session_state
 lagrede_data = last_inn_data()
-if "reisehistorikk" not in st.session_state:
-    st.session_state.reisehistorikk = lagrede_data["reisehistorikk"]
 if "reise_chat" not in st.session_state:
     st.session_state.reise_chat = lagrede_data["reise_chat"]
+if "reiseplan" not in st.session_state:
+    st.session_state.reiseplan = lagrede_data.get("reiseplan", [])
 if "profil" not in st.session_state:
-    st.session_state.profil = _normaliser_profil(lagrede_data.get("profil"))
+    st.session_state.profil = normaliser_profil(lagrede_data.get("profil"))
+if "_reiseplan_synced" not in st.session_state:
+    sync_reiseplan_to_sqlite(st.session_state.reiseplan)
+    st.session_state._reiseplan_synced = True
+if "bilde_autoload_wiki" not in st.session_state:
+    st.session_state.bilde_autoload_wiki = False
 if "_profil_lagret_snapshot" not in st.session_state:
     st.session_state._profil_lagret_snapshot = json.dumps(
         st.session_state.profil, sort_keys=True, ensure_ascii=False
@@ -376,6 +307,7 @@ spraak = st.sidebar.segmented_control(
 )
 
 _spraak = spraak if spraak in TEKSTER else "NO"
+behandle_affiliate_pending(_spraak)
 
 # Sikrer overnatting-tekster selv om eldre translations.py mangler nøkler
 _HOTELL_TEKST_FALLBACK = {
@@ -530,9 +462,9 @@ def _lagre_profil_ved_endring(ny_profil):
     snapshot = json.dumps(st.session_state.profil, sort_keys=True, ensure_ascii=False)
     if st.session_state.get("_profil_lagret_snapshot") != snapshot:
         lagre_data(
-            st.session_state.reisehistorikk,
             st.session_state.reise_chat,
             st.session_state.profil,
+            st.session_state.get("reiseplan"),
         )
         st.session_state._profil_lagret_snapshot = snapshot
 
@@ -555,7 +487,6 @@ with st.sidebar.expander(tr("profil_expander"), expanded=False):
         {
             "reise_folge": ny_reise_folge,
             "budsjett": ny_budsjett,
-            "hovedinteresse": _profil["hovedinteresse"],
         }
     )
     st.caption(tr("profil_lagres_auto"))
@@ -982,6 +913,41 @@ def _chat_agent_oppdaget_tekst(kandidat):
     )
 
 
+def _match_kandidat_til_db_sted(kandidat):
+    """Kobler KI-forslag til eksisterende sted i databasen når navn+by matcher."""
+    if not kandidat:
+        return None
+    navn = (kandidat.get("navn") or "").strip().lower()
+    by = (kandidat.get("by") or "").strip().lower()
+    if not navn or not by:
+        return None
+    for sted in _alle_steder_i_databasen():
+        if (sted.get("navn") or "").strip().lower() == navn and (
+            sted.get("by") or ""
+        ).strip().lower() == by:
+            return dict(sted)
+    return None
+
+
+def _berik_kandidat_fra_db(kandidat):
+    """Fyller KI-kandidat med database-data når stedet finnes i appen."""
+    db_sted = _match_kandidat_til_db_sted(kandidat)
+    if not db_sted:
+        return kandidat
+    return {
+        **kandidat,
+        "id": db_sted.get("id", kandidat.get("id")),
+        "beskrivelse": db_sted.get("beskrivelse") or kandidat.get("beskrivelse", ""),
+        "tips": db_sted.get("tips") or kandidat.get("tips", ""),
+        "latitude": db_sted.get("latitude", kandidat.get("latitude")),
+        "longitude": db_sted.get("longitude", kandidat.get("longitude")),
+        "image_url": db_sted.get("image_url") or kandidat.get("image_url", ""),
+        "source_type": db_sted.get("source_type", kandidat.get("source_type")),
+        "type": db_sted.get("type", kandidat.get("type")),
+        "fra_database": True,
+    }
+
+
 def detekter_perle_fra_ai_svar(ai_tekst):
     """Finner mulig sted i AI-svaret (JSON først, deretter regex)."""
     if not ai_tekst:
@@ -990,6 +956,7 @@ def detekter_perle_fra_ai_svar(ai_tekst):
     kandidat = parse_agent_perle_fra_ai_svar(ai_tekst)
     if kandidat:
         kandidat = _juster_agent_perle_fra_chat_tekst(kandidat, ai_tekst)
+        kandidat = _berik_kandidat_fra_db(kandidat)
         if kandidat.get("saerhetsscore", 0) >= MIN_UNIKHETSGRAD:
             return kandidat
 
@@ -1020,6 +987,7 @@ def detekter_perle_fra_ai_svar(ai_tekst):
     funn["beskrivelse"] = ""
     funn["agent_id"] = f"agent-{_slug_tekst(funn['navn'])}-{_slug_tekst(funn['by'])}-{_slug_tekst(funn['land'])}"
     funn = _juster_agent_perle_fra_chat_tekst(funn, ai_tekst)
+    funn = _berik_kandidat_fra_db(funn)
     if funn.get("source_type") == "restaurant" and score < MIN_UNIKHETSGRAD:
         return None
     if funn.get("source_type") not in ("hotel", "restaurant"):
@@ -1701,8 +1669,6 @@ def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
         raise RuntimeError(tr("sank_mangler_api"))
 
     antall = max(2, min(10, int(antall)))
-    profil = _normaliser_profil(st.session_state.get("profil"))
-    interesse = profil.get("hovedinteresse", "Kultur & Historie")
     hotell_min = MIN_UNIKHETSGRAD
     hotell_json = (
         '"hoteller":[{"navn":"Unique stay name","beskrivelse":"Why it is special and worth a weekend stay...",'
@@ -1735,8 +1701,7 @@ def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
             "Prefer walkable old towns, local food, nature nearby, festivals or crafts — "
             "places with real character but NOT mass tourism. "
             "NEVER suggest capitals or bucket-list cities (Paris, Rome, Barcelona, Amsterdam, Venice, Prague, etc.). "
-            "NEVER suggest any of a country's 5 largest cities (e.g. in Italy: Rome, Milan, Naples, Turin, Palermo). "
-            f"Tailor slightly to traveller interest: {interesse}."
+            "NEVER suggest any of a country's 5 largest cities (e.g. in Italy: Rome, Milan, Naples, Turin, Palermo)."
         )
         user_prompt = f"Region: {omrade}. Number of towns: {antall}."
     else:
@@ -1762,8 +1727,7 @@ def sanke_helgebyer_for_omrade(omrade, antall=5, strict_mode=False):
             "Prioriter gåbare gamlebyer, lokal mat, natur i nærheten, håndverk eller festivaler — "
             "steder med sjel, men IKKE masseturisme. "
             "ALDRI foreslå hovedsteder eller bucket-list-byer (Paris, Roma, Barcelona, Amsterdam, Venezia, Praha osv.). "
-            "ALDRI foreslå noen av landets 5 største byer (f.eks. i Italia: Roma, Milano, Napoli, Torino, Palermo). "
-            f"Tilpass litt til reiseinteresse: {interesse}."
+            "ALDRI foreslå noen av landets 5 største byer (f.eks. i Italia: Roma, Milano, Napoli, Torino, Palermo)."
         )
         user_prompt = f"Region: {omrade}. Antall byer: {antall}."
 
@@ -1893,9 +1857,8 @@ def generer_reiseekspert_stream(sporsmal, kontekst=""):
     profil = _normaliser_profil(st.session_state.get("profil"))
     reise_folge = profil["reise_folge"]
     budsjett = profil["budsjett"]
-    hovedinteresse = profil["hovedinteresse"]
 
-    intern_kontekst = _bygg_rag_kontekst(sporsmal, hovedinteresse)
+    intern_kontekst = _bygg_rag_kontekst(sporsmal)
 
     if _spraak == "EN":
         json_instruks = (
@@ -1910,12 +1873,13 @@ def generer_reiseekspert_stream(sporsmal, kontekst=""):
         )
         system_melding = (
             "You are the AI agent for Hidden Europe: hidden gems and eccentric destinations. "
-            f"The user travels as {reise_folge} on a {budsjett} budget, focused on {hovedinteresse}. "
+            f"The user travels as {reise_folge} on a {budsjett} budget. "
             "Suggest off-the-beaten-path places with local character. "
             "Avoid mainstream tourism, iconic defaults like the Eiffel Tower, and well-visited blockbuster museums. "
             "Reply briefly and enthusiastically (max 5 sentences). "
             "Mention places as: Name (City, Country). "
-            f"{_restaurant_ki_hint(hovedinteresse == 'Mat & Vin')}"
+            "If database context lists places, prefer recommending one of them with exact name and city — do not invent similar places. "
+            f"{_restaurant_ki_hint(False)}"
             f"{json_instruks}"
             f"{intern_kontekst}"
         )
@@ -1932,12 +1896,13 @@ def generer_reiseekspert_stream(sporsmal, kontekst=""):
         )
         system_melding = (
             "Du er KI-agenten for Hemmelige Europa: skjulte perler og eksentriske reisemål. "
-            f"Brukeren reiser som {reise_folge} med et {budsjett}-budsjett, og har hovedfokus på {hovedinteresse}. "
+            f"Brukeren reiser som {reise_folge} med et {budsjett}-budsjett. "
             "Foreslå aktivt off-the-beaten-path-steder med lokal karakter, særegen historie eller quirky opplevelser. "
             "Unngå mainstream turisme, typiske turistfeller, store resorter, velbesøkte museer og ikoniske standardvalg som Eiffeltårnet. "
             "Svar kort, engasjerende, spesifikt og entusiastisk (maks 5 setninger). "
             "Nevn gjerne konkrete steder med formatet: Sted (By, Land). "
-            f"{_restaurant_ki_hint(hovedinteresse == 'Mat & Vin')}"
+            "Hvis database-kontekst lister steder, prioriter å anbefale ett av dem med eksakt navn og by — ikke finn opp lignende steder. "
+            f"{_restaurant_ki_hint(False)}"
             f"{json_instruks}"
             f"{intern_kontekst}"
         )
@@ -2023,29 +1988,13 @@ def _hent_sted_bilde_url_cached(sted_id, navn, by, land, latitude, longitude, st
     )
 
 
-def vis_sted_foto(sted, key_suffix=""):
-    """Viser forhåndslagrede bilder med én gang; ellers lazy Wikipedia-oppslag."""
-    suffix = key_suffix or sted.get("id", "")
-    forhånd = (sted.get("image_url") or "").strip()
-    if forhånd:
-        st.image(forhånd, use_container_width=True)
-        st.caption(tr("bilde_kilde").format(sted.get("navn", "")))
-        return
-
-    last_nokkel = f"foto_last_{suffix}"
-    if not st.session_state.get("bilde_autoload_wiki"):
-        if not st.session_state.get(last_nokkel):
-            if st.button(
-                tr("bilde_vis_knapp"),
-                key=f"foto_btn_{suffix}",
-                use_container_width=True,
-            ):
-                st.session_state[last_nokkel] = True
-                st.rerun()
-            return
-
-    bilde_url = _hent_sted_bilde_url_cached(
-        sted.get("id", ""),
+def _hent_sted_bilde_for_visning(sted):
+    pid = sted.get("id", "")
+    cache = st.session_state.setdefault("_bilde_url_cache", {})
+    if pid and pid in cache:
+        return cache[pid]
+    url = _hent_sted_bilde_url_cached(
+        pid,
         sted.get("navn", ""),
         sted.get("by", ""),
         sted.get("land", ""),
@@ -2055,9 +2004,19 @@ def vis_sted_foto(sted, key_suffix=""):
         sted.get("profil_kategori", ""),
         sted.get("image_url", ""),
     )
-    if bilde_url:
-        st.image(bilde_url, use_container_width=True)
-        st.caption(tr("bilde_kilde").format(sted.get("navn", "")))
+    if pid and url:
+        cache[pid] = url
+    return url
+
+
+def render_affiliate_lenker(sted, source_view, index=None):
+    _ui_render_affiliate_lenker(
+        sted, source_view, index, tr, _effektiv_kilde_type, _spraak
+    )
+
+
+def vis_sted_foto(sted, key_suffix=""):
+    _ui_vis_sted_foto(sted, key_suffix, tr, _hent_sted_bilde_for_visning)
 
 
 def render_reiseplan_knapp(place, key_prefix, index=None):
@@ -2071,6 +2030,7 @@ def render_reiseplan_knapp(place, key_prefix, index=None):
         type="secondary",
     ):
         add_itinerary_item(place)
+        persist_reiseplan()
         st.toast(tr("favoritt_lagt_til"))
 
 
@@ -2081,287 +2041,8 @@ def render_reiseplan_knapp_agent(kandidat, key_suffix):
         type="secondary",
     ):
         add_itinerary_item(agent_perle_til_reiseplan_sted(kandidat))
+        persist_reiseplan()
         st.toast(tr("favoritt_lagt_til"))
-
-
-KART_FARGE_MAT = "#1B5E20"
-KART_FARGE_HOTELL = "#6D4C41"
-KART_FARGE_KULTUR = "#6A1B9A"
-KART_FARGE_NATUR = "#00838F"
-KART_FARGE_GOLF = "#004D40"
-
-KART_KATEGORI_FARGER = {
-    "restaurant": KART_FARGE_MAT,
-    "hotel": KART_FARGE_HOTELL,
-    "hotell": KART_FARGE_HOTELL,
-    "Mat & Vin": KART_FARGE_MAT,
-    "Kultur & Historie": KART_FARGE_KULTUR,
-    "Natur & Aktivitet": KART_FARGE_NATUR,
-    "Golf": KART_FARGE_GOLF,
-    "gastronomi": KART_FARGE_MAT,
-    "kultur": KART_FARGE_KULTUR,
-    "kafé": KART_FARGE_MAT,
-    "kafe": KART_FARGE_MAT,
-    "natur": KART_FARGE_NATUR,
-    "historie": KART_FARGE_KULTUR,
-    "museum": KART_FARGE_KULTUR,
-    "arkitektur": KART_FARGE_KULTUR,
-    "urbanexploring": KART_FARGE_KULTUR,
-    "overnaturlig": KART_FARGE_KULTUR,
-    "spøkstad": KART_FARGE_KULTUR,
-    "eventyr": KART_FARGE_NATUR,
-    "golf": KART_FARGE_GOLF,
-    "friluft": KART_FARGE_NATUR,
-    "sport": KART_FARGE_NATUR,
-    "aktivitet": KART_FARGE_NATUR,
-}
-DEFAULT_KART_FARGE = "#B388FF"
-KART_SENTRUM_FARGE = "#2563EB"
-KART_TILES = "CartoDB Voyager"
-
-
-def _morkn_farge(hex_farge, factor=0.82):
-    h = hex_farge.lstrip("#")
-    if len(h) != 6:
-        return hex_farge
-    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
-    return f"#{int(r * factor):02x}{int(g * factor):02x}{int(b * factor):02x}"
-
-
-def _nytt_folium_kart(location, zoom_start=4):
-    return folium.Map(location=location, zoom_start=zoom_start, tiles=KART_TILES)
-
-
-def _lag_modern_kart_div_icon(farge, *, variant="sted", label=None):
-    """SVG-kartnål med gradient, hvit kant og skygge (Material/Maps-stil)."""
-    uid = abs(hash((farge, variant, label))) % 1_000_000
-    farge_mork = _morkn_farge(farge)
-    label_safe = html.escape(str(label)) if label is not None else ""
-
-    if variant == "sentrum":
-        storrelse = 40
-        html_str = (
-            f'<div style="width:{storrelse}px;height:{storrelse}px;position:relative;">'
-            f'<div style="position:absolute;inset:0;border-radius:50%;'
-            f'background:rgba(37,99,235,0.18);"></div>'
-            f'<div style="position:absolute;inset:6px;border-radius:50%;'
-            f'background:linear-gradient(145deg,#60a5fa,{KART_SENTRUM_FARGE});'
-            f'border:3px solid #fff;box-shadow:0 4px 16px rgba(29,78,216,0.45);'
-            f'display:flex;align-items:center;justify-content:center;">'
-            f'<div style="width:10px;height:10px;border-radius:50%;background:#fff;'
-            f'box-shadow:0 0 0 2px rgba(255,255,255,0.5);"></div></div></div>'
-        )
-        return folium.DivIcon(
-            html=html_str,
-            icon_size=(storrelse, storrelse),
-            icon_anchor=(storrelse // 2, storrelse // 2),
-            class_name="he-kart-sentrum",
-        )
-
-    pin_w, pin_h = 34, 44
-    if label:
-        inner_symbol = (
-            f'<circle cx="17" cy="12" r="8.5" fill="#ffffff"/>'
-            f'<text x="17" y="12.5" text-anchor="middle" dominant-baseline="middle" '
-            f'font-size="10" font-weight="700" fill="{farge}" '
-            f'font-family="Segoe UI,Arial,sans-serif">{label_safe}</text>'
-        )
-    else:
-        inner_symbol = '<circle cx="17" cy="12" r="5" fill="#ffffff" opacity="0.96"/>'
-
-    html_str = (
-        f'<div style="width:{pin_w}px;height:{pin_h}px;margin:0;padding:0;">'
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{pin_w}" height="{pin_h}" '
-        f'viewBox="0 0 34 44" role="img" aria-hidden="true">'
-        f"<defs>"
-        f'<filter id="he-sh-{uid}" x="-25%" y="-15%" width="150%" height="140%">'
-        f'<feDropShadow dx="0" dy="2.5" stdDeviation="2.2" flood-color="#0f172a" '
-        f'flood-opacity="0.32"/></filter>'
-        f'<linearGradient id="he-g-{uid}" x1="0%" y1="0%" x2="0%" y2="100%">'
-        f'<stop offset="0%" stop-color="{farge}"/><stop offset="100%" stop-color="{farge_mork}"/>'
-        f"</linearGradient></defs>"
-        f'<path filter="url(#he-sh-{uid})" fill="url(#he-g-{uid})" stroke="#ffffff" '
-        f'stroke-width="2.5" stroke-linejoin="round" '
-        f'd="M17 2C10.1 2 5 7.1 5 13.2c0 7.5 12 28.8 12 28.8s12-21.3 12-28.8C29 7.1 23.9 2 17 2z"/>'
-        f"{inner_symbol}</svg></div>"
-    )
-    return folium.DivIcon(
-        html=html_str,
-        icon_size=(pin_w, pin_h),
-        icon_anchor=(pin_w // 2, pin_h - 1),
-        class_name="he-modern-marker",
-    )
-
-
-def kart_markor_farge(sted):
-    """Returnerer hex-farge for kartmarkør basert på profil_kategori, type eller source_type."""
-    if sted.get("source_type") == "restaurant":
-        return KART_KATEGORI_FARGER["restaurant"]
-    if sted.get("source_type") == "hotel":
-        return KART_KATEGORI_FARGER["hotel"]
-
-    for key in (sted.get("profil_kategori"), sted.get("type")):
-        if not key:
-            continue
-        if key in KART_KATEGORI_FARGER:
-            return KART_KATEGORI_FARGER[key]
-        low = str(key).lower()
-        if low in KART_KATEGORI_FARGER:
-            return KART_KATEGORI_FARGER[low]
-    return DEFAULT_KART_FARGE
-
-
-def _hent_sted_bilde_for_kart(sted):
-    if sted.get("image_url"):
-        return sted["image_url"]
-    return _hent_sted_bilde_url_cached(
-        sted.get("id", ""),
-        sted.get("navn", ""),
-        sted.get("by", ""),
-        sted.get("land", ""),
-        sted.get("latitude"),
-        sted.get("longitude"),
-        sted.get("type", ""),
-        sted.get("profil_kategori", ""),
-        sted.get("image_url", ""),
-    )
-
-
-def lag_sted_kart_popup(sted):
-    """HTML-popup med navn, sted og bilde hvis tilgjengelig."""
-    navn = html.escape(sted.get("navn", ""))
-    by = html.escape(sted.get("by", ""))
-    land = html.escape(sted.get("land", ""))
-    kategori = html.escape(
-        sted.get("profil_kategori") or sted.get("type") or sted.get("source_type", "")
-    )
-    bilde_html = ""
-    # Kun forhåndslagret bilde-URL i kart-popup (unngår trege API-kall ved hver rerun).
-    bilde_url = (sted.get("image_url") or "").strip()
-    if bilde_url:
-        safe_url = html.escape(bilde_url, quote=True)
-        bilde_html = (
-            f'<img src="{safe_url}" width="150" alt="{navn}" '
-            'style="border-radius:8px;display:block;margin-top:5px;">'
-        )
-    return (
-        f'<div style="font-family:Segoe UI,sans-serif;max-width:240px;">'
-        f"<strong>{navn}</strong><br>"
-        f"📍 {by}, {land}<br>"
-        f'<span style="color:#6B7280;font-size:0.85em;">{kategori}</span>'
-        f"{bilde_html}"
-        f"</div>"
-    )
-
-
-def legg_til_sted_markor(kart, sted):
-    """Legger til én moderne fargekodet kartnål med popup."""
-    farge = kart_markor_farge(sted)
-    folium.Marker(
-        location=[sted["latitude"], sted["longitude"]],
-        tooltip=f"{sted.get('navn', '')} ({sted.get('by', '')})",
-        popup=folium.Popup(lag_sted_kart_popup(sted), max_width=280),
-        icon=_lag_modern_kart_div_icon(farge),
-    ).add_to(kart)
-
-
-def lag_stedskart(steder, sentrum=None, zoom_start=4):
-    """Folium-kart med kategorifarger og bilde-popup for en liste steder."""
-    if sentrum:
-        m = _nytt_folium_kart([sentrum[0], sentrum[1]], zoom_start=zoom_start)
-    else:
-        m = _nytt_folium_kart([54.0, 14.0], zoom_start=zoom_start)
-    for sted in steder:
-        if sted.get("latitude") is None or sted.get("longitude") is None:
-            continue
-        legg_til_sted_markor(m, sted)
-    return m
-
-
-def lag_perler_kart(steder):
-    """Folium-kart for skjulte perler (bakoverkompatibel wrapper)."""
-    return lag_stedskart(steder)
-
-
-def optimaliser_reiserute_naermeste_nabo(items):
-    """Sorterer reiseplan geografisk med nearest-neighbor fra første sted."""
-    if len(items) <= 1:
-        return list(items)
-
-    med_koord = [
-        i for i in items if i.get("latitude") is not None and i.get("longitude") is not None
-    ]
-    uten_koord = [
-        i for i in items if i.get("latitude") is None or i.get("longitude") is None
-    ]
-    if len(med_koord) <= 1:
-        return list(items)
-
-    gjenstaende = list(med_koord[1:])
-    rekkefolge = [med_koord[0]]
-    while gjenstaende:
-        sist = rekkefolge[-1]
-        lat1, lon1 = float(sist["latitude"]), float(sist["longitude"])
-        nærmeste_idx = 0
-        kortest = float("inf")
-        for idx, kandidat in enumerate(gjenstaende):
-            avstand = regn_ut_avstand_km(
-                lat1, lon1, float(kandidat["latitude"]), float(kandidat["longitude"])
-            )
-            if avstand < kortest:
-                kortest = avstand
-                nærmeste_idx = idx
-        rekkefolge.append(gjenstaende.pop(nærmeste_idx))
-    return rekkefolge + uten_koord
-
-
-def lag_chat_oppdag_kart(lat, lon, sentrum_navn="", radius_km=50):
-    """Chat-kart med blått søkepunkt og nærliggende perler/spisesteder innen radius."""
-    m = _nytt_folium_kart([lat, lon], zoom_start=9)
-    navn = html.escape(sentrum_navn or "Søkepunkt")
-    folium.Marker(
-        location=[lat, lon],
-        tooltip=sentrum_navn or "Søkepunkt",
-        popup=f"<b>{navn}</b>",
-        icon=_lag_modern_kart_div_icon(KART_SENTRUM_FARGE, variant="sentrum"),
-    ).add_to(m)
-
-    for sted in _alle_steder_i_databasen():
-        slat = sted.get("latitude")
-        slon = sted.get("longitude")
-        if slat is None or slon is None:
-            continue
-        if regn_ut_avstand_km(lat, lon, float(slat), float(slon)) > radius_km:
-            continue
-        legg_til_sted_markor(m, sted)
-    return m
-
-
-def lag_radar_kart(treff_liste, sentrum=None, sentrum_navn="", zoom_start=7):
-    if sentrum:
-        m = _nytt_folium_kart([sentrum[0], sentrum[1]], zoom_start=zoom_start)
-        folium.Marker(
-            location=[sentrum[0], sentrum[1]],
-            tooltip=sentrum_navn,
-            popup=folium.Popup(
-                f'<div style="font-family:Segoe UI,sans-serif;"><b>{html.escape(sentrum_navn or "")}</b></div>',
-                max_width=220,
-            ),
-            icon=_lag_modern_kart_div_icon(KART_SENTRUM_FARGE, variant="sentrum"),
-        ).add_to(m)
-    else:
-        m = _nytt_folium_kart([54.0, 14.0], zoom_start=zoom_start)
-
-    for treff in treff_liste:
-        place = treff["data"]
-        popup = f"<b>{place['navn']}</b><br>{place['by']}, {place['land']}<br>{treff['avstand']} km"
-        folium.Marker(
-            location=[place["latitude"], place["longitude"]],
-            tooltip=f"{place['navn']} ({place['by']})",
-            popup=folium.Popup(popup, max_width=260),
-            icon=_lag_modern_kart_div_icon(kart_markor_farge(place)),
-        ).add_to(m)
-    return m
 
 
 def beregn_radar_filtrering(
@@ -2453,7 +2134,7 @@ def beregn_radar_filtrering(
         n = len(treff)
         sentrum = (lat_sum / n, lon_sum / n)
 
-    treff.sort(key=lambda x: (_profil_sorteringsnøkkel(x["data"]), x["avstand"]))
+    treff.sort(key=lambda x: x["avstand"])
     return treff, sentrum, sentrum_navn, naermeste_perle_tekst
 
 
@@ -2504,15 +2185,6 @@ def _sted_emoji(sted):
     return "🏛️"
 
 
-def filtrer_data(data):
-    """Filtrerer bort steder uten gyldige koordinater."""
-    return [
-        d
-        for d in data
-        if d.get("latitude") is not None and d.get("longitude") is not None
-    ]
-
-
 def _normaliser_for_sok(tekst):
     """Aksent-uavhengig søk (malaga matcher Málaga)."""
     tekst = (tekst or "").lower().strip()
@@ -2535,16 +2207,9 @@ def _sted_matcher_sok(sted, soketekst):
     return norm_sok in blob
 
 
-def _filtrer_perler_liste(soketekst, type_filter, alle_type_label, radar_treff):
-    """Perlesøk i hele databasen; uten søk vises kun radartreff (skjulte perler)."""
-    if soketekst or type_filter != alle_type_label:
-        kandidater = SKJULTE_PERLER_DB
-    else:
-        kandidater = [
-            treff["data"]
-            for treff in radar_treff
-            if _effektiv_kilde_type(treff["data"]) == "hidden_gem"
-        ]
+def _filtrer_perler_liste(soketekst, type_filter, alle_type_label, radar_treff=None):
+    """Perlesøk i hele databasen; uten søk vises alle skjulte perler."""
+    kandidater = SKJULTE_PERLER_DB
     filtrert = []
     for perle in kandidater:
         if type_filter != alle_type_label and perle.get("type") != type_filter:
@@ -2555,139 +2220,27 @@ def _filtrer_perler_liste(soketekst, type_filter, alle_type_label, radar_treff):
     return filtrert
 
 
-def _aktiv_hovedinteresse():
-    return _normaliser_profil(st.session_state.get("profil"))["hovedinteresse"]
+def _grupper_oppdagelser_pa_land(steder):
+    """Grupperer oppdagelser alfabetisk på land."""
+    grupper = {}
+    for sted in steder:
+        land = (sted.get("land") or "").strip() or tr("radar_region_default")
+        grupper.setdefault(land, []).append(sted)
+    return {
+        land: sorted(steder_i_land, key=lambda s: (s.get("navn") or "").lower())
+        for land, steder_i_land in sorted(grupper.items(), key=lambda x: x[0].lower())
+    }
 
 
-def _samlet_sted_tekst(sted):
-    return " ".join(
-        str(sted.get(felt, "") or "") for felt in ("navn", "beskrivelse", "tips", "type")
-    ).lower()
-
-
-def _type_matcher_profil(sted_type, hovedinteresse):
-    sted_type = (sted_type or "").lower()
-    if hovedinteresse == "Mat & Vin":
-        return sted_type in {
-            "gastronomi",
-            "kafé",
-            "kafe",
-            "restaurant",
-            "mat",
-            "vin",
-            "spisested",
-        }
-    if hovedinteresse == "Kultur & Historie":
-        return sted_type in {
-            "kultur",
-            "historie",
-            "museum",
-            "arkitektur",
-            "kafé",
-            "kafe",
-            "spøkstad",
-            "urbanexploring",
-            "overnaturlig",
-        }
-    if hovedinteresse == "Natur & Aktivitet":
-        return sted_type in {"natur", "eventyr", "friluft"}
-    if hovedinteresse == "Sport":
-        return sted_type in {"sport", "aktivitet", "eventyr", "ski", "sykkel"}
-    if hovedinteresse == "Golf":
-        return sted_type == "golf"
-    return False
-
-
-def matcher_profil_interesse(sted, hovedinteresse=None):
-    """True hvis stedet matcher brukerens valgte hovedinteresse."""
-    hovedinteresse = hovedinteresse or _aktiv_hovedinteresse()
-    if sted.get("profil_kategori") == hovedinteresse:
-        return True
-
-    sted_type = (sted.get("type") or "").lower()
-    tekst = _samlet_sted_tekst(sted)
-
-    if hovedinteresse == "Golf":
-        return sted_type == "golf" or "golf" in tekst
-
-    if _type_matcher_profil(sted_type, hovedinteresse):
-        return True
-
-    if hovedinteresse == "Mat & Vin":
-        return any(
-            nøkkel in tekst
-            for nøkkel in (
-                "mat",
-                "vin",
-                "restaurant",
-                "spis",
-                "gastronomi",
-                "kafé",
-                "kafe",
-                "bryggeri",
-                "øl",
-            )
-        )
-    if hovedinteresse == "Kultur & Historie":
-        return any(
-            nøkkel in tekst
-            for nøkkel in ("kultur", "historie", "museum", "unesco", "kirke", "borg", "festning")
-        )
-    if hovedinteresse == "Natur & Aktivitet":
-        return any(
-            nøkkel in tekst
-            for nøkkel in ("natur", "fjell", "vandring", "nasjonalpark", "eventyr", "aktiv", "tur")
-        )
-    if hovedinteresse == "Sport":
-        return any(
-            nøkkel in tekst
-            for nøkkel in (
-                "sport",
-                "ski",
-                "sykkel",
-                "løp",
-                "fotball",
-                "tennis",
-                "padel",
-                "klatring",
-                "dykking",
-                "surf",
-                "rafting",
-                "arena",
-                "stadion",
-            )
-        )
-    return False
-
-
-def _profil_sorteringsnøkkel(sted, hovedinteresse=None):
-    """Lavere verdi = vises først. Type-treff prioriteres over tekst-treff."""
-    hovedinteresse = hovedinteresse or _aktiv_hovedinteresse()
-    if not matcher_profil_interesse(sted, hovedinteresse):
-        return (1, 2, (sted.get("navn") or "").lower())
-
-    sted_type = (sted.get("type") or "").lower()
-    if hovedinteresse == "Golf":
-        prioritet = 0 if sted_type == "golf" else 1
-        return (0, prioritet, (sted.get("navn") or "").lower())
-
-    if hovedinteresse == "Sport":
-        prioritet = 0 if _type_matcher_profil(sted_type, hovedinteresse) else 1
-        return (0, prioritet, (sted.get("navn") or "").lower())
-
-    if _type_matcher_profil(sted_type, hovedinteresse):
-        return (0, 0, (sted.get("navn") or "").lower())
-    return (0, 1, (sted.get("navn") or "").lower())
-
-
-def sorter_steder_etter_profil(steder, hovedinteresse=None):
-    hovedinteresse = hovedinteresse or _aktiv_hovedinteresse()
-    return sorted(steder, key=lambda s: _profil_sorteringsnøkkel(s, hovedinteresse))
-
-
-def _profil_tekst_naturlig(hovedinteresse):
-    """Gjør profilinteresse lesbar i setninger (f.eks. «kultur og historie»)."""
-    return (hovedinteresse or "").replace(" & ", " og ").lower()
+def _hent_tilfeldig_oppdagelse(steder, land_filter=None, alle_land_label=None):
+    """Velger én tilfeldig oppdagelse, valgfritt filtrert på land."""
+    alle_land_label = alle_land_label or T["perler_alle"]
+    pool = list(steder)
+    if land_filter and land_filter != alle_land_label:
+        pool = [s for s in pool if s.get("land") == land_filter]
+    if not pool:
+        return None
+    return random.choice(pool)
 
 
 def _matcher_overnatting_type(valgt_type, sted_type):
@@ -2732,55 +2285,28 @@ def vis_sted_type(sted):
     return ""
 
 
-def bygg_radar_ki_innsikt(valgt_land, radar_treff, hovedinteresse):
+def bygg_radar_ki_innsikt(valgt_land, radar_treff):
     """Lager dynamisk innsikt for radar ved landvalg."""
     if not valgt_land:
         return ""
-    profil_tekst = _profil_tekst_naturlig(hovedinteresse)
     antall = len(radar_treff or [])
     if antall == 0:
-        return tr("radar_innsikt_tom").format(valgt_land, profil_tekst)
+        return tr("radar_innsikt_tom").format(valgt_land)
 
-    naermeste = min(radar_treff, key=lambda t: t.get("avstand", 999999))
-    by_navn = naermeste.get("data", {}).get("by") or valgt_land
-    return tr("radar_innsikt_treff").format(valgt_land, antall, by_navn, profil_tekst)
+    return tr("radar_innsikt_treff").format(valgt_land, antall)
 
 
 def sted_tittel_med_profil(sted, standard_emoji):
-    """Tittel med 🌟 når stedet matcher aktiv hovedinteresse."""
+    """Tittel med valgfri emoji foran stedsnavn."""
     navn = sted.get("navn", "")
     emoji_del = f"{standard_emoji} " if standard_emoji else ""
-    if matcher_profil_interesse(sted):
-        return f"🌟 {emoji_del}{navn}".strip()
     return f"{emoji_del}{navn}".strip()
 
 
 def _render_travel_card_html(sted, tittel, *, pris_tekst=None):
-    """Kompakt HTML-boks for stedsbeskrivelse i perle/mat/overnatting-lister."""
-    meta = f"📍 {html.escape(sted.get('by', ''))}, {html.escape(sted.get('land', ''))}"
-    type_vis = vis_sted_type(sted)
-    if type_vis:
-        meta += f" · {html.escape(type_vis)}"
-
-    extras = []
-    if pris_tekst:
-        extras.append(f'<p class="travel-card-price">{html.escape(pris_tekst)}</p>')
-    if sted.get("tips"):
-        extras.append(f'<p class="travel-tip">💡 {html.escape(sted["tips"])}</p>')
-    if sted.get("beste_tid"):
-        extras.append(
-            f'<p class="travel-card-time">{html.escape(tr("perler_beste_tid").format(sted["beste_tid"]))}</p>'
-        )
-    extra_html = "\n".join(extras)
-
-    return f"""
-<div class="travel-card">
-    <h3 class="travel-card-title">{html.escape(tittel)}</h3>
-    <p class="travel-card-meta">{meta}</p>
-    <p class="travel-card-desc">{html.escape(sted.get("beskrivelse") or "")}</p>
-    {extra_html}
-</div>
-"""
+    return _ui_render_travel_card_html(
+        sted, tittel, tr, vis_sted_type, pris_tekst=pris_tekst
+    )
 
 
 # ========================================
@@ -2867,7 +2393,7 @@ def _unike_rag_treff(treff):
     return unike
 
 
-def _hent_geo_rag_treff(sentrum_lat, sentrum_lon, hovedinteresse):
+def _hent_geo_rag_treff(sentrum_lat, sentrum_lon):
     treff = []
     for sted in _alle_steder_i_databasen():
         if not _sted_har_koordinater(sted):
@@ -2884,38 +2410,30 @@ def _hent_geo_rag_treff(sentrum_lat, sentrum_lon, hovedinteresse):
         if avstand <= RAG_RADIUS_KM:
             treff.append({"sted": sted, "avstand": avstand})
 
-    treff.sort(
-        key=lambda t: (_profil_sorteringsnøkkel(t["sted"], hovedinteresse), t["avstand"])
-    )
+    treff.sort(key=lambda t: t["avstand"])
     return _unike_rag_treff(treff)[:RAG_MAX_TREFF]
 
 
-def _hent_fallback_rag_treff(hovedinteresse):
+def _hent_fallback_rag_treff():
     alle = _alle_steder_i_databasen()
-    matchende = [s for s in alle if matcher_profil_interesse(s, hovedinteresse)]
-    sortert = sorter_steder_etter_profil(matchende, hovedinteresse)
-    if len(sortert) >= RAG_MAX_TREFF:
-        return sortert[:RAG_MAX_TREFF]
-
-    rest = [s for s in alle if s not in matchende]
-    return (sortert + sorter_steder_etter_profil(rest, hovedinteresse))[:RAG_MAX_TREFF]
+    return sorted(alle, key=lambda s: (s.get("navn") or "").lower())[:RAG_MAX_TREFF]
 
 
-def _bygg_rag_kontekst(sporsmal, hovedinteresse):
-    """Bygger RAG-kontekst: geo+nærhet ved lokasjon, ellers profil-fallback."""
+def _bygg_rag_kontekst(sporsmal):
+    """Bygger RAG-kontekst: geo+nærhet ved lokasjon, ellers tilfeldig utvalg fra databasen."""
     lat, lon, stedsnavn = _hent_lokasjon_fra_sporsmal(sporsmal)
     linjer = []
     geo_modus = False
 
     if lat is not None and lon is not None:
-        geo_treff = _hent_geo_rag_treff(lat, lon, hovedinteresse)
+        geo_treff = _hent_geo_rag_treff(lat, lon)
         if geo_treff:
             geo_modus = True
             for t in geo_treff:
                 linjer.append(_format_rag_linje(t["sted"], round(t["avstand"], 1)))
 
     if not linjer:
-        for sted in _hent_fallback_rag_treff(hovedinteresse):
+        for sted in _hent_fallback_rag_treff():
             linjer.append(_format_rag_linje(sted))
 
     if not linjer:
@@ -2928,16 +2446,14 @@ def _bygg_rag_kontekst(sporsmal, hovedinteresse):
             f"\n\nDu har tilgang til følgende eksklusive, skjulte perler fra vår interne database "
             f"som ligger i umiddelbar nærhet av området brukeren spør om ({omrade}):\n{body}\n\n"
             f"Du SKAL flette disse spesifikke anbefalingene naturlig inn i svaret ditt, og fremheve dem "
-            f"som skreddersydde innsidertips som matcher brukerens interesse for {hovedinteresse}."
+            f"som skreddersydde innsidertips fra databasen."
         )
 
     return (
-        f"\n\nDu har tilgang til følgende eksklusive perler fra vår interne database "
-        f"som matcher brukerens reiseprofil ({hovedinteresse}):\n{body}\n\n"
+        f"\n\nDu har tilgang til følgende eksklusive perler fra vår interne database:\n{body}\n\n"
         f"Du SKAL flette disse spesifikke anbefalingene naturlig inn i svaret ditt, og fremheve dem "
-        f"som skreddersydde innsidertips som matcher brukerens interesse for {hovedinteresse}."
+        f"som skreddersydde innsidertips fra databasen."
     )
-
 
 
 # ========================================
@@ -2946,10 +2462,10 @@ def _bygg_rag_kontekst(sporsmal, hovedinteresse):
 st.title(T["app_tittel"])
 st.caption(T["app_caption"])
 
-fane0, fane_helgeby, fane1, fane2, fane3, fane4, fane5 = st.tabs(
+fane0, fane_ki, fane1, fane2, fane3, fane4, fane5 = st.tabs(
     [
         tr("fane_hjem"),
-        tr("fane_helgeby"),
+        tr("fane_ki"),
         tr("fane_mat"),
         tr("fane_hotell"),
         tr("fane_chat"),
@@ -2971,6 +2487,62 @@ with fane0:
             T["hjem_metric_land"],
             len(set(s["country_code"] or s["land"] for s in alle_oppdagelser)),
         )
+
+    unike_land_hjem = sorted({s["land"] for s in alle_oppdagelser if s.get("land")})
+    rand_c1, rand_c2 = st.columns([2, 1])
+    with rand_c1:
+        tilfeldig_land = st.selectbox(
+            tr("hjem_filter_land"),
+            [T["perler_alle"]] + unike_land_hjem,
+            key="tilfeldig_land_filter",
+        )
+    with rand_c2:
+        st.write("")
+        if st.button(
+            tr("hjem_knapp_tilfeldig"),
+            key="tilfeldig_knapp",
+            use_container_width=True,
+        ):
+            valgt = _hent_tilfeldig_oppdagelse(
+                alle_oppdagelser, tilfeldig_land, T["perler_alle"]
+            )
+            if valgt:
+                st.session_state["tilfeldig_oppdagelse"] = valgt
+            else:
+                st.session_state.pop("tilfeldig_oppdagelse", None)
+                st.warning(tr("hjem_tilfeldig_ingen"))
+
+    tilfeldig_sted = st.session_state.get("tilfeldig_oppdagelse")
+    if tilfeldig_sted:
+        with st.container(border=True):
+            tilfeldig_tittel = sted_tittel_med_profil(tilfeldig_sted, _sted_emoji(tilfeldig_sted))
+            vis_sted_foto(tilfeldig_sted, key_suffix=f"tilfeldig_{tilfeldig_sted['id']}")
+            st.markdown(
+                _render_travel_card_html(tilfeldig_sted, tilfeldig_tittel),
+                unsafe_allow_html=True,
+            )
+            tilfeldig_view = (
+                "mat"
+                if tilfeldig_sted.get("source_type") == "restaurant"
+                else "overnatting"
+                if tilfeldig_sted.get("source_type") == "hotel"
+                else "perle"
+            )
+            render_reiseplan_knapp(tilfeldig_sted, tilfeldig_view, index="tilfeldig")
+            render_affiliate_lenker(tilfeldig_sted, "tilfeldig", index="tilfeldig")
+
+    with st.expander(tr("perler_reisemal_header"), expanded=False):
+        land_grupper = _grupper_oppdagelser_pa_land(alle_oppdagelser)
+        if not land_grupper:
+            st.info(tr("perler_ingen_reisemal"))
+        else:
+            for land, steder_i_land in land_grupper.items():
+                with st.expander(f"{land} ({len(steder_i_land)})", expanded=False):
+                    for sted in steder_i_land:
+                        by_del = f" — {sted['by']}" if sted.get("by") else ""
+                        type_del = vis_sted_type(sted)
+                        type_tekst = f" · {type_del}" if type_del else ""
+                        st.markdown(f"**{sted['navn']}**{by_del}{type_tekst}")
 
     st.divider()
     st.subheader(T["radar_tittel"])
@@ -3072,13 +2644,7 @@ with fane0:
             )
 
         if soke_metode == T["radar_land_sok"] and valgt_land:
-            st.success(
-                bygg_radar_ki_innsikt(
-                    valgt_land,
-                    radar_treff,
-                    _aktiv_hovedinteresse(),
-                )
-            )
+            st.success(bygg_radar_ki_innsikt(valgt_land, radar_treff))
 
         if naermeste_perle_tekst:
             st.markdown(naermeste_perle_tekst)
@@ -3141,6 +2707,26 @@ with fane0:
             st.info(T["radar_ingen_treff"])
 
         st.write("---")
+        st.subheader(T["perler_header"])
+        perler_med_koords = filtrer_data(SKJULTE_PERLER_DB)
+        with st.expander(tr("perler_kart_expander"), expanded=False):
+            if perler_med_koords:
+                perler_alle_kart = lag_stedskart(perler_med_koords)
+                st_folium(
+                    perler_alle_kart,
+                    width="stretch",
+                    height=420,
+                    returned_objects=[],
+                    key="perler_alle_folium_kart",
+                )
+                st.caption(
+                    tr("perler_kart_caption").format(
+                        len(perler_med_koords), len(SKJULTE_PERLER_DB)
+                    )
+                )
+            else:
+                st.info(T["perler_ingen_koordinater"])
+
         col_s1, col_s2 = st.columns(2)
         with col_s1:
             sok_perle = st.text_input(T["perler_sok"], "", key="perler_sok_input").strip()
@@ -3155,7 +2741,16 @@ with fane0:
         filtrerte_perler = _filtrer_perler_liste(
             sok_perle, type_perle, T["perler_alle"], radar_treff
         )
-        filtrerte_perler = sorter_steder_etter_profil(filtrerte_perler)
+
+        if not sok_perle and type_perle == T["perler_alle"]:
+            st.caption(tr("perler_viser_alle").format(len(filtrerte_perler)))
+
+        perler_filter_key = f"{sok_perle}|{type_perle}"
+        if st.session_state.get("_perler_filter_key") != perler_filter_key:
+            st.session_state["_perler_filter_key"] = perler_filter_key
+            st.session_state["perler_vis_antall"] = 12
+        vis_antall = st.session_state.get("perler_vis_antall", 12)
+        perler_side = filtrerte_perler[:vis_antall]
 
         if sok_perle:
             sok_med_koords = filtrer_data(filtrerte_perler)
@@ -3184,12 +2779,12 @@ with fane0:
                     key="perler_sok_folium_kart",
                 )
 
-        if filtrerte_perler:
-            for i in range(0, len(filtrerte_perler), 3):
+        if perler_side:
+            for i in range(0, len(perler_side), 3):
                 cols = st.columns(3)
                 for j in range(3):
-                    if i + j < len(filtrerte_perler):
-                        p = filtrerte_perler[i + j]
+                    if i + j < len(perler_side):
+                        p = perler_side[i + j]
                         perle_tittel = sted_tittel_med_profil(p, _sted_emoji(p))
                         with cols[j]:
                             vis_sted_foto(p, key_suffix=f"perle_{p['id']}")
@@ -3205,6 +2800,15 @@ with fane0:
                                 else "perle"
                             )
                             render_reiseplan_knapp(p, view_key, index=i + j)
+                            if view_key in ("mat", "overnatting"):
+                                render_affiliate_lenker(p, view_key, index=i + j)
+            if len(filtrerte_perler) > vis_antall:
+                if st.button(
+                    tr("perler_vis_flere").format(len(filtrerte_perler) - vis_antall),
+                    key="perler_vis_flere_btn",
+                ):
+                    st.session_state["perler_vis_antall"] = vis_antall + 12
+                    st.rerun()
         else:
             st.info(T["perler_ingen_treff"])
             if sok_perle and any(
@@ -3213,136 +2817,161 @@ with fane0:
                 st.caption(tr("perler_sok_mat_hint").format(sok_perle))
 
 
-# --- FANE: HELGEBY ---
-with fane_helgeby:
-    st.header(tr("helgeby_header"))
-    st.caption(tr("helgeby_caption"))
-    with st.form("helgeby_form"):
-        helgeby_omrade = st.text_input(
-            tr("helgeby_omrade"),
-            placeholder=tr("helgeby_omrade_ph"),
-            key="helgeby_omrade_input",
-        )
-        helgeby_antall = st.slider(
-            tr("helgeby_antall"),
-            min_value=2,
-            max_value=8,
-            value=4,
-            key="helgeby_antall_input",
-        )
-        helgeby_streng = st.checkbox(
-            tr("sank_strict_mode"),
-            value=False,
-            key="helgeby_strict_input",
-        )
-        start_helgeby = st.form_submit_button(
-            tr("helgeby_knapp"), type="primary", use_container_width=True
+# --- FANE: KI (OPPDAGELSER + HELGEBY) ---
+with fane_ki:
+    ki_modus = st.segmented_control(
+        tr("ki_modus_label"),
+        options=[tr("ki_modus_oppdagelser"), tr("ki_modus_helgeby")],
+        default=tr("ki_modus_oppdagelser"),
+        key="ki_modus_valg",
+    )
+    if ki_modus == tr("ki_modus_helgeby"):
+        st.header(tr("helgeby_header"))
+        st.caption(tr("helgeby_caption"))
+    else:
+        st.header(tr("sank_header"))
+        st.caption(tr("sank_caption"))
+        _render_sank_ki_panel(
+            tr=tr,
+            min_unikhetsgrad=MIN_UNIKHETSGRAD,
+            sanke_perler_for_omrade=sanke_perler_for_omrade,
+            lagre_agent_perle_i_db=lagre_agent_perle_i_db,
+            legg_lagret_sted_i_lokale_lister=_legg_lagret_sted_i_lokale_lister,
+            kilde_type_visning=_kilde_type_visning,
+            kandidat_lagringsstatus=_kandidat_lagringsstatus,
+            render_reiseplan_knapp_agent=render_reiseplan_knapp_agent,
+            chat_lagre_tekster=_chat_lagre_tekster,
         )
 
-    helgeby_kandidater = list(st.session_state.get("helgeby_kandidater") or [])
-    helgeby_rapport = st.session_state.get("helgeby_rapport")
-
-    if start_helgeby:
-        omrade = (helgeby_omrade or "").strip()
-        if not omrade:
-            st.error(tr("helgeby_feil_omrade"))
-        else:
-            st.session_state.pop("helgeby_kandidater", None)
-            st.session_state.pop("helgeby_rapport", None)
-            try:
-                with st.spinner(tr("helgeby_spinner").format(omrade)):
-                    kandidater, rapport = sanke_helgebyer_for_omrade(
-                        omrade,
-                        helgeby_antall,
-                        strict_mode=helgeby_streng,
-                    )
-                st.session_state["helgeby_kandidater"] = kandidater
-                st.session_state["helgeby_rapport"] = rapport
-                helgeby_kandidater = list(kandidater or [])
-                helgeby_rapport = rapport
-            except Exception as e:
-                st.error(tr("helgeby_feil_generell").format(str(e)))
-
-    if helgeby_rapport:
-        st.caption(
-            tr("helgeby_rapport").format(
-                helgeby_rapport.get("foreslaatt", 0),
-                helgeby_rapport.get("godkjent", 0),
-                helgeby_rapport.get("forkastet_mainstream", 0),
-                helgeby_rapport.get("forkastet_storby", 0),
-                helgeby_rapport.get("forkastet_hotell", 0),
-                helgeby_rapport.get("forkastet_score", 0),
+    if ki_modus == tr("ki_modus_helgeby"):
+        with st.form("helgeby_form"):
+            helgeby_omrade = st.text_input(
+                tr("helgeby_omrade"),
+                placeholder=tr("helgeby_omrade_ph"),
+                key="helgeby_omrade_input",
             )
-        )
+            helgeby_antall = st.slider(
+                tr("helgeby_antall"),
+                min_value=2,
+                max_value=8,
+                value=4,
+                key="helgeby_antall_input",
+            )
+            helgeby_streng = st.checkbox(
+                tr("sank_strict_mode"),
+                value=False,
+                key="helgeby_strict_input",
+            )
+            start_helgeby = st.form_submit_button(
+                tr("helgeby_knapp"), type="primary", use_container_width=True
+            )
 
-    if helgeby_kandidater and not any(
-        isinstance(k.get("hoteller"), list) and k["hoteller"] for k in helgeby_kandidater
-    ):
-        st.warning(tr("helgeby_hotell_stale"))
+        helgeby_kandidater = list(st.session_state.get("helgeby_kandidater") or [])
+        helgeby_rapport = st.session_state.get("helgeby_rapport")
 
-    if helgeby_kandidater:
-        for idx, kandidat in enumerate(helgeby_kandidater):
-            with st.container(border=True):
-                st.markdown(
-                    f"**{kandidat['by']}**  \n"
-                    + tr("helgeby_kandidat_meta").format(
-                        kandidat["by"],
-                        kandidat["land"],
-                        kandidat.get("saerhetsscore", 0),
-                    )
-                )
-                if kandidat.get("hvorfor_helg"):
-                    st.markdown(f"**{tr('helgeby_hvorfor')}** {kandidat['hvorfor_helg']}")
-                elif kandidat.get("beskrivelse"):
-                    st.write(kandidat["beskrivelse"])
-                if kandidat.get("highlights"):
-                    st.markdown(
-                        f"**{tr('helgeby_highlights')}:** "
-                        + ", ".join(kandidat["highlights"])
-                    )
-                if kandidat.get("beste_tid"):
-                    st.caption(tr("helgeby_beste_tid") + ": " + kandidat["beste_tid"])
-                hoteller = kandidat.get("hoteller") or []
-                st.subheader(tr("helgeby_hoteller"))
-                if not hoteller:
-                    st.caption(tr("helgeby_hotell_mangler"))
-                for h_idx, hotell in enumerate(hoteller):
-                    with st.container(border=True):
-                        pris = (hotell.get("pris") or "").strip()
-                        pris_del = f" · {pris}" if pris else ""
-                        st.markdown(
-                            f"**{hotell.get('navn', '')}** · "
-                            f"{tr('helgeby_hotell_unikhet').format(hotell.get('saerhetsscore', 0))}"
-                            f"{pris_del}"
+        if start_helgeby:
+            omrade = (helgeby_omrade or "").strip()
+            if not omrade:
+                st.error(tr("helgeby_feil_omrade"))
+            else:
+                st.session_state.pop("helgeby_kandidater", None)
+                st.session_state.pop("helgeby_rapport", None)
+                try:
+                    with st.spinner(tr("helgeby_spinner").format(omrade)):
+                        kandidater, rapport = sanke_helgebyer_for_omrade(
+                            omrade,
+                            helgeby_antall,
+                            strict_mode=helgeby_streng,
                         )
-                        if hotell.get("beskrivelse"):
-                            st.write(hotell["beskrivelse"])
+                    st.session_state["helgeby_kandidater"] = kandidater
+                    st.session_state["helgeby_rapport"] = rapport
+                    helgeby_kandidater = list(kandidater or [])
+                    helgeby_rapport = rapport
+                except Exception as e:
+                    st.error(tr("helgeby_feil_generell").format(str(e)))
+
+        if helgeby_rapport:
+            st.caption(
+                tr("helgeby_rapport").format(
+                    helgeby_rapport.get("foreslaatt", 0),
+                    helgeby_rapport.get("godkjent", 0),
+                    helgeby_rapport.get("forkastet_mainstream", 0),
+                    helgeby_rapport.get("forkastet_storby", 0),
+                    helgeby_rapport.get("forkastet_hotell", 0),
+                    helgeby_rapport.get("forkastet_score", 0),
+                )
+            )
+
+        if helgeby_kandidater and not any(
+            isinstance(k.get("hoteller"), list) and k["hoteller"] for k in helgeby_kandidater
+        ):
+            st.warning(tr("helgeby_hotell_stale"))
+
+        if helgeby_kandidater:
+            for idx, kandidat in enumerate(helgeby_kandidater):
+                with st.container(border=True):
+                    st.markdown(
+                        f"**{kandidat['by']}**  \n"
+                        + tr("helgeby_kandidat_meta").format(
+                            kandidat["by"],
+                            kandidat["land"],
+                            kandidat.get("saerhetsscore", 0),
+                        )
+                    )
+                    if kandidat.get("hvorfor_helg"):
+                        st.markdown(
+                            f"**{tr('helgeby_hvorfor')}** {kandidat['hvorfor_helg']}"
+                        )
+                    elif kandidat.get("beskrivelse"):
+                        st.write(kandidat["beskrivelse"])
+                    if kandidat.get("highlights"):
+                        st.markdown(
+                            f"**{tr('helgeby_highlights')}:** "
+                            + ", ".join(kandidat["highlights"])
+                        )
+                    if kandidat.get("beste_tid"):
+                        st.caption(tr("helgeby_beste_tid") + ": " + kandidat["beste_tid"])
+                    hoteller = kandidat.get("hoteller") or []
+                    st.subheader(tr("helgeby_hoteller"))
+                    if not hoteller:
+                        st.caption(tr("helgeby_hotell_mangler"))
+                    for h_idx, hotell in enumerate(hoteller):
+                        with st.container(border=True):
+                            pris = (hotell.get("pris") or "").strip()
+                            pris_del = f" · {pris}" if pris else ""
+                            st.markdown(
+                                f"**{hotell.get('navn', '')}** · "
+                                f"{tr('helgeby_hotell_unikhet').format(hotell.get('saerhetsscore', 0))}"
+                                f"{pris_del}"
+                            )
+                            if hotell.get("beskrivelse"):
+                                st.write(hotell["beskrivelse"])
+                            if st.button(
+                                tr("helgeby_lagre_hotell"),
+                                key=f"helgeby_hotel_{idx}_{h_idx}_{hotell['agent_id']}",
+                                use_container_width=True,
+                            ):
+                                lagret = lagre_agent_perle_i_db(hotell)
+                                _legg_lagret_sted_i_lokale_lister(lagret)
+                                st.toast(tr("chat_lagre_toast"))
+                                st.rerun()
+                    col_plan, col_db = st.columns([1, 1])
+                    with col_plan:
+                        render_reiseplan_knapp_agent(
+                            kandidat, f"helgeby_{idx}_{kandidat['agent_id']}"
+                        )
+                    with col_db:
                         if st.button(
-                            tr("helgeby_lagre_hotell"),
-                            key=f"helgeby_hotel_{idx}_{h_idx}_{hotell['agent_id']}",
+                            tr("chat_lagre_db"),
+                            key=f"helgeby_save_{idx}_{kandidat['agent_id']}",
                             use_container_width=True,
                         ):
-                            lagret = lagre_agent_perle_i_db(hotell)
+                            lagret = lagre_agent_perle_i_db(kandidat)
                             _legg_lagret_sted_i_lokale_lister(lagret)
                             st.toast(tr("chat_lagre_toast"))
                             st.rerun()
-                col_plan, col_db = st.columns([1, 1])
-                with col_plan:
-                    render_reiseplan_knapp_agent(
-                        kandidat, f"helgeby_{idx}_{kandidat['agent_id']}"
-                    )
-                with col_db:
-                    if st.button(
-                        tr("chat_lagre_db"),
-                        key=f"helgeby_save_{idx}_{kandidat['agent_id']}",
-                        use_container_width=True,
-                    ):
-                        lagret = lagre_agent_perle_i_db(kandidat)
-                        _legg_lagret_sted_i_lokale_lister(lagret)
-                        st.toast(tr("chat_lagre_toast"))
-                        st.rerun()
-    elif helgeby_rapport and helgeby_rapport.get("godkjent", 0) == 0:
-        st.info(tr("helgeby_ingen"))
+        elif helgeby_rapport and helgeby_rapport.get("godkjent", 0) == 0:
+            st.info(tr("helgeby_ingen"))
 
 
 # --- FANE 1: MAT ---
@@ -3388,7 +3017,6 @@ with fane1:
             continue
         filtrert_mat.append(sted)
 
-    filtrert_mat = sorter_steder_etter_profil(filtrert_mat)
 
     if filtrert_mat:
         for i in range(0, len(filtrert_mat), 3):
@@ -3408,6 +3036,7 @@ with fane1:
                             unsafe_allow_html=True,
                         )
                         render_reiseplan_knapp(s, "mat", index=i + j)
+                        render_affiliate_lenker(s, "mat", index=i + j)
     else:
         st.info(T["mat_ingen_treff"])
 
@@ -3463,7 +3092,6 @@ with fane2:
             continue
         filtrert_hotell.append(sted)
 
-    filtrert_hotell = sorter_steder_etter_profil(filtrert_hotell)
 
     if filtrert_hotell:
         for i in range(0, len(filtrert_hotell), 3):
@@ -3483,6 +3111,7 @@ with fane2:
                             unsafe_allow_html=True,
                         )
                         render_reiseplan_knapp(s, "hotell", index=i + j)
+                        render_affiliate_lenker(s, "hotell", index=i + j)
     else:
         st.info(tr("hotell_ingen_treff"))
 
@@ -3492,177 +3121,6 @@ with fane3:
     st.header(T["chat_header"])
     st.caption(T["chat_caption"])
 
-    with st.expander(tr("sank_expander"), expanded=False):
-        with st.form("sank_perler_form"):
-            sank_omrade = st.text_input(
-                tr("sank_omrade"),
-                placeholder=tr("sank_omrade_ph"),
-                key="sank_omrade_input",
-            )
-            sank_antall = st.slider(
-                tr("sank_antall"),
-                min_value=3,
-                max_value=20,
-                value=8,
-                key="sank_antall_input",
-            )
-            st.caption(
-                tr("sank_min_score_fast").format(MIN_UNIKHETSGRAD)
-                + " "
-                + tr("hotell_min_unikhet").format(MIN_UNIKHETSGRAD)
-                + " "
-                + tr("mat_min_unikhet").format(MIN_UNIKHETSGRAD)
-            )
-            sank_streng = st.checkbox(
-                tr("sank_strict_mode"),
-                value=False,
-                key="sank_strict_mode_input",
-            )
-            start_sank = st.form_submit_button(
-                tr("sank_knapp"), type="primary", use_container_width=True
-            )
-
-        sank_kandidater = list(st.session_state.get("sank_kandidater") or [])
-        sank_rapport = st.session_state.get("sank_rapport")
-
-        if start_sank:
-            omrade = (sank_omrade or "").strip()
-            if not omrade:
-                st.error(tr("sank_feil_omrade"))
-            else:
-                st.session_state.pop("sank_kandidater", None)
-                st.session_state.pop("sank_rapport", None)
-                try:
-                    with st.spinner(tr("sank_spinner").format(omrade)):
-                        kandidater, rapport = sanke_perler_for_omrade(
-                            omrade,
-                            sank_antall,
-                            strict_mode=sank_streng,
-                        )
-                    st.session_state["sank_kandidater"] = kandidater
-                    st.session_state["sank_rapport"] = rapport
-                    st.session_state["sank_omrade"] = omrade
-                    sank_kandidater = list(kandidater or [])
-                    sank_rapport = rapport
-                except Exception as e:
-                    st.error(tr("sank_feil_generell").format(str(e)))
-        if sank_rapport:
-            st.caption(
-                tr("sank_rapport").format(
-                    sank_rapport.get("foreslaatt", 0),
-                    sank_rapport.get("godkjent", 0),
-                    sank_rapport.get("forkastet_duplikat", 0),
-                    sank_rapport.get("forkastet_score", 0),
-                    sank_rapport.get("forkastet_geo", 0),
-                    sank_rapport.get("forkastet_normalisering", 0),
-                )
-            )
-            if st.session_state.get("vis_perf_debug"):
-                st.caption(
-                    tr("perf_sank").format(
-                        sank_rapport.get("tid_geo_s", 0),
-                        sank_rapport.get("tid_total_s", 0),
-                    )
-                )
-
-        if sank_kandidater:
-            sortering = st.selectbox(
-                tr("sank_sorter"),
-                [
-                    tr("sank_sorter_score_desc"),
-                    tr("sank_sorter_score_asc"),
-                    tr("sank_sorter_navn"),
-                ],
-                key="sank_sortering",
-            )
-            if sortering == tr("sank_sorter_score_desc"):
-                visningsliste = sorted(
-                    sank_kandidater,
-                    key=lambda k: k.get("saerhetsscore", 0),
-                    reverse=True,
-                )
-            elif sortering == tr("sank_sorter_score_asc"):
-                visningsliste = sorted(
-                    sank_kandidater,
-                    key=lambda k: k.get("saerhetsscore", 0),
-                )
-            else:
-                visningsliste = sorted(
-                    sank_kandidater,
-                    key=lambda k: (k.get("navn") or "").lower(),
-                )
-
-            if st.button(tr("sank_lagre_alle"), use_container_width=True, key="sank_save_all"):
-                lagret_antall = 0
-                for kandidat in sank_kandidater:
-                    if kandidat.get("allerede_i_db"):
-                        continue
-                    lagret = lagre_agent_perle_i_db(kandidat)
-                    _legg_lagret_sted_i_lokale_lister(lagret)
-                    lagret_antall += 1
-                st.session_state["sank_kandidater"] = []
-                if lagret_antall:
-                    st.session_state["sank_rapport"] = None
-                st.success(tr("sank_lagret_alle").format(lagret_antall))
-                st.rerun()
-
-            for idx, kandidat in enumerate(visningsliste):
-                with st.container(border=True):
-                    st.markdown(
-                        f"**{kandidat['navn']}**  \n"
-                        + tr("sank_kandidat_meta").format(
-                            _kilde_type_visning(kandidat),
-                            kandidat.get("saerhetsscore", 0),
-                            kandidat["by"],
-                            kandidat["land"],
-                        )
-                    )
-                    if kandidat.get("beskrivelse"):
-                        st.write(kandidat["beskrivelse"])
-                    if kandidat.get("latitude") is None or kandidat.get("longitude") is None:
-                        st.caption(tr("sank_uten_koordinater"))
-                    lagringsstatus = kandidat.get("lagringsstatus") or _kandidat_lagringsstatus(
-                        kandidat
-                    )
-                    if lagringsstatus.get("melding_nokkel") and (
-                        lagringsstatus.get("allerede_synlig") or lagringsstatus.get("erstatter")
-                    ):
-                        st.caption(tr(lagringsstatus["melding_nokkel"]))
-                    col_plan, col_db = st.columns([1, 1])
-                    with col_plan:
-                        render_reiseplan_knapp_agent(
-                            kandidat, f"sank_{idx}_{kandidat['agent_id']}"
-                        )
-                    with col_db:
-                        if lagringsstatus.get("allerede_synlig"):
-                            pass
-                        elif st.button(
-                            _chat_lagre_tekster(kandidat)[0],
-                            key=f"sank_save_{idx}_{kandidat['agent_id']}",
-                            use_container_width=True,
-                        ):
-                            lagret = lagre_agent_perle_i_db(kandidat)
-                            _legg_lagret_sted_i_lokale_lister(lagret)
-                            rest = st.session_state.get("sank_kandidater", [])
-                            st.session_state["sank_kandidater"] = [
-                                k for k in rest if k.get("agent_id") != kandidat.get("agent_id")
-                            ]
-                            st.toast(_chat_lagre_tekster(kandidat)[1])
-                            st.rerun()
-        elif sank_rapport and sank_rapport.get("godkjent", 0) == 0:
-            if sank_rapport.get("foreslaatt", 0) == 0:
-                st.info(tr("sank_ingen_tom"))
-            else:
-                st.info(
-                    tr("sank_ingen")
-                    + " "
-                    + tr("sank_ingen_detalj").format(
-                        sank_rapport.get("forkastet_score", 0),
-                        sank_rapport.get("forkastet_duplikat", 0),
-                        sank_rapport.get("forkastet_normalisering", 0),
-                    )
-                )
-
     if not st.session_state.reise_chat:
         st.info(tr("chat_ingen_meldinger"))
 
@@ -3671,13 +3129,13 @@ with fane3:
         <html>
         <head>
             <style>
-                body { font-family: 'Inter', 'Segoe UI', sans-serif; padding: 30px; color: #2A2622; background: #F5F2EE; line-height: 1.6; }
-                .header { text-align: center; border-bottom: 2px solid #9A8B7C; padding-bottom: 10px; margin-bottom: 30px; }
+                body { font-family: 'Inter', 'Segoe UI', sans-serif; padding: 30px; color: #1F1F1F; background: #F8FAFD; line-height: 1.6; }
+                .header { text-align: center; border-bottom: 2px solid #1A73E8; padding-bottom: 10px; margin-bottom: 30px; }
                 .message-box { margin-bottom: 20px; padding: 15px; border-radius: 10px; }
-                .user { background-color: #FFFFFF; border-left: 4px solid #C9BDB0; color: #45403A; }
-                .assistant { background-color: #FCFAF7; border-left: 4px solid #9A8B7C; color: #45403A; }
-                .sender-name { font-weight: 700; font-size: 0.9em; color: #564E47; margin-bottom: 5px; }
-                .map-hint { font-size: 0.85em; color: #5E5852; font-style: italic; margin-top: 10px; }
+                .user { background-color: #FFFFFF; border-left: 4px solid #DADCE0; color: #3C4043; }
+                .assistant { background-color: #F0F4F9; border-left: 4px solid #1A73E8; color: #3C4043; }
+                .sender-name { font-weight: 700; font-size: 0.9em; color: #1A73E8; margin-bottom: 5px; }
+                .map-hint { font-size: 0.85em; color: #5F6368; font-style: italic; margin-top: 10px; }
             </style>
         </head>
         <body>
@@ -3734,6 +3192,7 @@ with fane3:
                 chat_kart = lag_chat_oppdag_kart(
                     melding["lat"],
                     melding["lon"],
+                    _alle_steder_i_databasen(),
                     melding.get("sted") or "",
                 )
                 sted_key = (melding.get("sted") or "destinasjon").replace(" ", "_")
@@ -3823,7 +3282,9 @@ with fane3:
             if lat and lon:
                 st.write("")
                 st.markdown(f"{T['chat_kart_over']} {sted_for_kart.capitalize()}:")
-                ny_chat_kart = lag_chat_oppdag_kart(lat, lon, sted_for_kart)
+                ny_chat_kart = lag_chat_oppdag_kart(
+                    lat, lon, _alle_steder_i_databasen(), sted_for_kart
+                )
                 sted_key = (sted_for_kart or "destinasjon").replace(" ", "_")
                 st_folium(
                     ny_chat_kart,
@@ -3850,9 +3311,9 @@ with fane3:
             }
         )
         lagre_data(
-            st.session_state.reisehistorikk,
             st.session_state.reise_chat,
             st.session_state.profil,
+            st.session_state.get("reiseplan"),
         )
         st.rerun()
 
@@ -3899,6 +3360,7 @@ with fane4:
                         "type": "egendefinert",
                     }
                     add_itinerary_item(eget_sted)
+                    persist_reiseplan()
                     st.success(tr("reiseplan_lagret_ok"))
                     st.rerun()
 
@@ -3948,6 +3410,7 @@ with fane4:
                     use_container_width=True,
                 ):
                     remove_itinerary_item(item["id"])
+                    persist_reiseplan()
                     st.rerun()
 
         dager = st.slider(
@@ -3971,13 +3434,45 @@ with fane4:
 with fane5:
     stedvalg = bygg_stedvalg_fra_database(_alle_steder_i_databasen())
     alle_labels = sorted(stedvalg.keys())
+    plan_items = get_itinerary_items()
+
+    def _label_for_sted(sted):
+        for label, kandidat in stedvalg.items():
+            if kandidat.get("id") == sted.get("id"):
+                return label
+        return None
+
+    if len(plan_items) >= 2:
+        st.subheader(tr("transport_fra_plan"))
+        for i in range(len(plan_items) - 1):
+            fra_item, til_item = plan_items[i], plan_items[i + 1]
+            if st.button(
+                tr("transport_leg_knapp").format(fra_item["navn"], til_item["navn"]),
+                key=f"tp_plan_leg_{i}",
+                use_container_width=True,
+            ):
+                fra_l = _label_for_sted(fra_item)
+                til_l = _label_for_sted(til_item)
+                if fra_l:
+                    st.session_state["tp_fra_select"] = fra_l
+                if til_l:
+                    st.session_state["tp_til_select"] = til_l
+                st.rerun()
 
     if alle_labels:
+        if "tp_fra_select" not in st.session_state:
+            st.session_state["tp_fra_select"] = alle_labels[0]
+        if "tp_til_select" not in st.session_state:
+            st.session_state["tp_til_select"] = alle_labels[min(1, len(alle_labels) - 1)]
         c_fra, c_til = st.columns(2)
         with c_fra:
-            fra_label = st.selectbox(T["transport_fra"], alle_labels, key="tp_fra_select")
+            fra_label = st.selectbox(
+                T["transport_fra"], alle_labels, key="tp_fra_select"
+            )
         with c_til:
-            til_label = st.selectbox(T["transport_til"], alle_labels, key="tp_til_select")
+            til_label = st.selectbox(
+                T["transport_til"], alle_labels, key="tp_til_select"
+            )
 
         fra_sted = stedvalg.get(fra_label)
         til_sted = stedvalg.get(til_label)
@@ -3990,35 +3485,23 @@ with fane5:
                 til_sted["land"],
                 spraak,
             )
-            c1, c2, c3, c4 = st.columns(4)
-            with c1:
-                st.link_button(
-                    T["transport_lenke_google"],
-                    eksterne["google"],
-                    use_container_width=True,
-                    key="tp_link_google",
-                )
-            with c2:
-                st.link_button(
-                    T["transport_lenke_omio"],
-                    eksterne["omio"],
-                    use_container_width=True,
-                    key="tp_link_omio",
-                )
-            with c3:
-                st.link_button(
-                    T["transport_lenke_rome2rio"],
-                    eksterne["rome2rio"],
-                    use_container_width=True,
-                    key="tp_link_rome2rio",
-                )
-            with c4:
-                st.link_button(
-                    T["transport_lenke_trainline"],
-                    eksterne["trainline"],
-                    use_container_width=True,
-                    key="tp_link_trainline",
-                )
+            lenker = [
+                ("google", T["transport_lenke_google"]),
+                ("omio", T["transport_lenke_omio"]),
+                ("rome2rio", T["transport_lenke_rome2rio"]),
+                ("trainline", T["transport_lenke_trainline"]),
+            ]
+            if "cp_atlas" in eksterne:
+                lenker.append(("cp_atlas", tr("transport_lenke_cp")))
+            kolonner = st.columns(len(lenker))
+            for col, (slug, tekst) in zip(kolonner, lenker):
+                with col:
+                    st.link_button(
+                        tekst,
+                        eksterne[slug],
+                        use_container_width=True,
+                        key=f"tp_link_{slug}",
+                    )
 
 
 

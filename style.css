@@ -1,19 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-    --greige-bg: #F5F2EE;
-    --greige-bg-soft: #FCFAF7;
-    --greige-surface: #FFFFFF;
-    --greige-surface-2: #F0ECE7;
-    --greige-text: #2A2622;
-    --greige-text-secondary: #45403A;
-    --greige-muted: #5E5852;
-    --greige-border: #E3DDD6;
-    --greige-accent: #7A6E62;
-    --greige-accent-strong: #564E47;
-    --greige-highlight: #9A8B7C;
-    --greige-radius: 10px;
-    --greige-shadow: 0 1px 3px rgba(42, 38, 34, 0.05);
+    --gemini-bg: #F8FAFD;
+    --gemini-surface: #FFFFFF;
+    --gemini-surface-2: #F0F4F9;
+    --gemini-text: #1F1F1F;
+    --gemini-text-secondary: #3C4043;
+    --gemini-muted: #5F6368;
+    --gemini-border: #DADCE0;
+    --gemini-blue: #1A73E8;
+    --gemini-purple: #A142F4;
+    --gemini-radius: 18px;
+    --gemini-shadow: 0 12px 34px rgba(60, 64, 67, 0.12);
 }
 
 html, body, [class*="css"], .stMarkdown, [data-testid="stAppViewContainer"] {
@@ -24,10 +22,10 @@ html, body, [class*="css"], .stMarkdown, [data-testid="stAppViewContainer"] {
 
 .stApp {
     background:
-        radial-gradient(circle at 12% 0%, rgba(154, 139, 124, 0.08), transparent 28rem),
-        radial-gradient(circle at 88% 4%, rgba(122, 110, 98, 0.06), transparent 30rem),
-        linear-gradient(180deg, var(--greige-bg-soft) 0%, var(--greige-bg) 55%, #F0ECE7 100%);
-    color: var(--greige-text);
+        radial-gradient(circle at top left, rgba(26, 115, 232, 0.16), transparent 28rem),
+        radial-gradient(circle at top right, rgba(161, 66, 244, 0.14), transparent 30rem),
+        var(--gemini-bg);
+    color: var(--gemini-text);
 }
 
 section.main > div {
@@ -37,18 +35,18 @@ section.main > div {
 
 h1 {
     font-weight: 700 !important;
-    color: var(--greige-text) !important;
+    color: var(--gemini-text) !important;
     letter-spacing: -0.04em !important;
-    line-height: 1.08 !important;
+    line-height: 1.04 !important;
 }
 
 h2, h3, h4 {
-    color: var(--greige-text) !important;
+    color: var(--gemini-text) !important;
     font-weight: 600 !important;
 }
 
 .stMarkdown, p, span, label, li {
-    color: var(--greige-text-secondary) !important;
+    color: var(--gemini-text-secondary) !important;
 }
 
 [data-testid="stCaptionContainer"],
@@ -56,28 +54,28 @@ h2, h3, h4 {
 .stCaption,
 small,
 [data-testid="stMarkdownContainer"] small {
-    color: var(--greige-muted) !important;
+    color: var(--gemini-muted) !important;
     font-weight: 500 !important;
     line-height: 1.45 !important;
 }
 
 [data-testid="stSidebar"] {
-    background: color-mix(in srgb, var(--greige-surface) 90%, transparent) !important;
-    border-right: 1px solid var(--greige-border);
+    background: color-mix(in srgb, var(--gemini-surface) 88%, transparent) !important;
+    border-right: 1px solid var(--gemini-border);
 }
 
 [data-testid="stSidebar"] .stMarkdown,
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] p {
-    color: var(--greige-text-secondary) !important;
+    color: var(--gemini-text-secondary) !important;
 }
 
 [data-testid="stMetric"],
 [data-testid="stExpander"] {
-    background: color-mix(in srgb, var(--greige-surface) 96%, transparent) !important;
-    border: 1px solid var(--greige-border) !important;
-    border-radius: var(--greige-radius) !important;
-    box-shadow: var(--greige-shadow);
+    background: color-mix(in srgb, var(--gemini-surface) 94%, transparent) !important;
+    border: 1px solid var(--gemini-border) !important;
+    border-radius: var(--gemini-radius) !important;
+    box-shadow: var(--gemini-shadow);
 }
 
 [data-testid="stMetric"] {
@@ -85,20 +83,20 @@ small,
 }
 
 [data-testid="stMetricLabel"] {
-    color: var(--greige-muted) !important;
+    color: var(--gemini-muted) !important;
     font-weight: 600 !important;
     font-size: 0.82rem !important;
 }
 
 [data-testid="stMetricValue"] {
-    color: var(--greige-text) !important;
+    color: var(--gemini-text) !important;
     font-weight: 700 !important;
 }
 
 .streamlit-expanderHeader {
-    background-color: var(--greige-surface-2) !important;
-    color: var(--greige-text) !important;
-    border-radius: var(--greige-radius) !important;
+    background-color: var(--gemini-surface-2) !important;
+    color: var(--gemini-text) !important;
+    border-radius: var(--gemini-radius) !important;
     font-weight: 600 !important;
 }
 
@@ -106,10 +104,10 @@ small,
     min-height: 0;
     padding: 0.5rem 0.6rem;
     margin: 0.3rem 0 0.4rem;
-    background: var(--greige-surface) !important;
-    border: 1px solid var(--greige-border) !important;
-    border-radius: var(--greige-radius) !important;
-    box-shadow: none;
+    background: var(--gemini-surface) !important;
+    border: 1px solid var(--gemini-border) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 8px rgba(60, 64, 67, 0.08);
 }
 
 .travel-card-title {
@@ -117,7 +115,7 @@ small,
     font-size: 0.86rem !important;
     font-weight: 600 !important;
     line-height: 1.25 !important;
-    color: var(--greige-text) !important;
+    color: var(--gemini-text) !important;
 }
 
 .travel-card-meta {
@@ -125,14 +123,14 @@ small,
     font-size: 0.72rem !important;
     font-weight: 500 !important;
     line-height: 1.3 !important;
-    color: var(--greige-muted) !important;
+    color: var(--gemini-muted) !important;
 }
 
 .travel-card-desc {
     margin: 0;
     font-size: 0.78rem !important;
     line-height: 1.42 !important;
-    color: var(--greige-text-secondary) !important;
+    color: var(--gemini-text-secondary) !important;
 }
 
 .travel-tip,
@@ -141,11 +139,11 @@ small,
     margin: 0.3rem 0 0;
     font-size: 0.72rem !important;
     line-height: 1.35 !important;
-    color: var(--greige-muted) !important;
+    color: var(--gemini-muted) !important;
 }
 
 .travel-card-price {
-    color: var(--greige-accent-strong) !important;
+    color: var(--gemini-blue) !important;
     font-weight: 600 !important;
 }
 
@@ -159,11 +157,11 @@ small,
 
 [data-testid="column"] [data-testid="stImage"] img,
 [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stImage"] img {
-    border-radius: 8px;
+    border-radius: 10px;
     object-fit: cover;
     max-height: 96px;
     width: 100%;
-    box-shadow: none;
+    box-shadow: 0 4px 12px rgba(60, 64, 67, 0.12);
 }
 
 [data-testid="column"] [data-testid="stCaptionContainer"],
@@ -179,9 +177,9 @@ small,
 
 [data-testid="stVerticalBlockBorderWrapper"] {
     padding: 0.45rem 0.55rem !important;
-    border-radius: var(--greige-radius) !important;
-    border-color: var(--greige-border) !important;
-    box-shadow: none !important;
+    border-radius: 12px !important;
+    border-color: var(--gemini-border) !important;
+    box-shadow: 0 2px 8px rgba(60, 64, 67, 0.08) !important;
 }
 
 .stTabs [data-baseweb="tab-list"] {
@@ -189,39 +187,39 @@ small,
     top: 0.25rem;
     z-index: 40;
     display: flex;
-    gap: 0.3rem;
+    gap: 0.45rem;
     overflow-x: auto;
-    padding: 0.3rem;
-    border-radius: 10px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    background: color-mix(in srgb, var(--greige-surface) 78%, transparent) !important;
-    border: 1px solid color-mix(in srgb, var(--greige-border) 85%, transparent);
-    box-shadow: none;
+    padding: 0.45rem;
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: color-mix(in srgb, var(--gemini-surface) 72%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--gemini-border) 80%, transparent);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.10);
 }
 
 .stTabs [data-baseweb="tab"] {
-    border-radius: 8px;
-    padding: 0.35rem 0.7rem;
+    border-radius: 12px;
+    padding: 0.5rem 0.95rem;
     font-size: 0.82rem !important;
-    background: color-mix(in srgb, var(--greige-surface-2) 80%, transparent);
-    border: 1px solid color-mix(in srgb, var(--greige-border) 80%, transparent);
-    color: var(--greige-text-secondary) !important;
+    background: color-mix(in srgb, var(--gemini-surface-2) 75%, transparent);
+    border: 1px solid color-mix(in srgb, var(--gemini-border) 75%, transparent);
+    color: var(--gemini-text-secondary) !important;
     font-weight: 500 !important;
     transition: all 0.2s ease;
 }
 
 .stTabs [data-baseweb="tab"]:hover {
     transform: translateY(-1px);
-    background: color-mix(in srgb, var(--greige-surface) 88%, transparent);
-    color: var(--greige-text) !important;
-    box-shadow: 0 6px 16px rgba(42, 38, 34, 0.10);
+    background: color-mix(in srgb, var(--gemini-surface) 82%, transparent);
+    color: var(--gemini-text) !important;
+    box-shadow: 0 6px 16px rgba(30, 41, 59, 0.14);
 }
 
 .stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, rgba(107, 95, 84, 0.18), rgba(138, 123, 108, 0.14));
-    color: var(--greige-accent-strong) !important;
-    border-color: color-mix(in srgb, var(--greige-accent) 35%, var(--greige-border));
+    background: linear-gradient(135deg, rgba(26, 115, 232, 0.16), rgba(161, 66, 244, 0.16));
+    color: var(--gemini-blue) !important;
+    border-color: color-mix(in srgb, var(--gemini-blue) 30%, var(--gemini-border));
     font-weight: 600 !important;
 }
 
@@ -241,36 +239,36 @@ small,
 .stDownloadButton > button,
 .stFormSubmitButton > button,
 .stLinkButton > a {
-    border-radius: 10px !important;
+    border-radius: 16px !important;
     font-size: 0.82rem !important;
     padding: 0.35rem 0.75rem !important;
     min-height: 2rem !important;
-    border: 1px solid color-mix(in srgb, var(--greige-surface) 65%, var(--greige-border)) !important;
+    border: 1px solid color-mix(in srgb, #FFFFFF 70%, var(--gemini-border)) !important;
     background: linear-gradient(
         135deg,
-        color-mix(in srgb, var(--greige-surface) 88%, rgba(107, 95, 84, 0.10)),
-        color-mix(in srgb, var(--greige-surface-2) 82%, rgba(138, 123, 108, 0.08))
+        color-mix(in srgb, #FFFFFF 70%, rgba(26, 115, 232, 0.18)),
+        color-mix(in srgb, #FFFFFF 62%, rgba(161, 66, 244, 0.14))
     ) !important;
-    color: var(--greige-text) !important;
+    color: var(--gemini-text) !important;
     font-weight: 600 !important;
-    box-shadow: none !important;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    box-shadow: 0 8px 22px rgba(30, 41, 59, 0.14) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
 }
 
 .stButton > button:hover,
 .stDownloadButton > button:hover,
 .stFormSubmitButton > button:hover,
 .stLinkButton > a:hover {
-    transform: none;
-    filter: none;
-    box-shadow: none !important;
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+    box-shadow: 0 12px 26px rgba(30, 41, 59, 0.18) !important;
 }
 
 button[kind="primary"] {
-    background: linear-gradient(135deg, var(--greige-accent), var(--greige-highlight)) !important;
-    color: #FFFCF8 !important;
+    background: linear-gradient(135deg, var(--gemini-blue), var(--gemini-purple)) !important;
+    color: #FFFFFF !important;
     border: none !important;
 }
 
@@ -291,23 +289,23 @@ div[class*="st-key-plan_"] button {
     width: auto !important;
     max-width: 100%;
     border-radius: 999px !important;
-    border: 1px solid color-mix(in srgb, var(--greige-accent) 50%, var(--greige-border)) !important;
-    background: color-mix(in srgb, var(--greige-surface) 94%, rgba(107, 95, 84, 0.10)) !important;
-    color: var(--greige-accent-strong) !important;
+    border: 1px solid color-mix(in srgb, var(--gemini-blue) 45%, var(--gemini-border)) !important;
+    background: color-mix(in srgb, var(--gemini-surface) 96%, rgba(26, 115, 232, 0.08)) !important;
+    color: var(--gemini-blue) !important;
     font-weight: 700 !important;
     letter-spacing: 0.03em !important;
     text-transform: none !important;
-    box-shadow: 0 1px 4px rgba(42, 38, 34, 0.08) !important;
+    box-shadow: 0 1px 4px rgba(26, 115, 232, 0.1) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
 
 div[class*="st-key-plan_"] button:hover {
-    background: color-mix(in srgb, var(--greige-accent) 14%, var(--greige-surface)) !important;
-    border-color: var(--greige-accent) !important;
-    color: var(--greige-accent-strong) !important;
+    background: color-mix(in srgb, var(--gemini-blue) 12%, var(--gemini-surface)) !important;
+    border-color: var(--gemini-blue) !important;
+    color: var(--gemini-blue) !important;
     transform: translateY(-1px);
-    box-shadow: 0 3px 10px rgba(42, 38, 34, 0.12) !important;
+    box-shadow: 0 3px 10px rgba(26, 115, 232, 0.16) !important;
     filter: none !important;
 }
 
@@ -316,68 +314,73 @@ div[class*="st-key-plan_"] button:active {
 }
 
 [data-testid="stAlert"] {
-    background: color-mix(in srgb, var(--greige-surface) 92%, var(--greige-surface-2)) !important;
-    color: var(--greige-text-secondary) !important;
-    border: 1px solid var(--greige-border) !important;
+    background: color-mix(in srgb, var(--gemini-surface) 92%, var(--gemini-surface-2)) !important;
+    color: var(--gemini-text-secondary) !important;
+    border: 1px solid var(--gemini-border) !important;
     border-radius: 14px !important;
 }
 
 [data-testid="stAlert"] p,
 [data-testid="stAlert"] span {
-    color: var(--greige-text-secondary) !important;
+    color: var(--gemini-text-secondary) !important;
 }
 
 [data-testid="stTextInput"] input,
 [data-testid="stTextArea"] textarea,
 [data-testid="stNumberInput"] input {
-    background: var(--greige-surface) !important;
-    color: var(--greige-text) !important;
-    border-color: var(--greige-border) !important;
+    background: var(--gemini-surface) !important;
+    color: var(--gemini-text) !important;
+    border-color: var(--gemini-border) !important;
 }
 
 [data-testid="stTextInput"] input::placeholder,
 [data-testid="stTextArea"] textarea::placeholder {
-    color: var(--greige-muted) !important;
+    color: var(--gemini-muted) !important;
     opacity: 1 !important;
 }
 
 [data-baseweb="select"] > div,
 [data-testid="stSelectbox"] [data-baseweb="select"] > div {
-    background: var(--greige-surface) !important;
-    color: var(--greige-text) !important;
-    border-color: var(--greige-border) !important;
+    background: var(--gemini-surface) !important;
+    color: var(--gemini-text) !important;
+    border-color: var(--gemini-border) !important;
 }
 
 [data-testid="stSegmentedControl"] button {
-    color: var(--greige-text-secondary) !important;
+    color: var(--gemini-text-secondary) !important;
     font-weight: 600 !important;
 }
 
 [data-testid="stSegmentedControl"] button[aria-checked="true"] {
-    color: var(--greige-accent-strong) !important;
+    color: var(--gemini-blue) !important;
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --greige-bg: #F0ECE7;
-        --greige-bg-soft: #FAF8F5;
-        --greige-surface: #FFFFFF;
-        --greige-surface-2: #EDE8E2;
-        --greige-text: #2A2622;
-        --greige-text-secondary: #45403A;
-        --greige-muted: #5E5852;
-        --greige-border: #DDD7D0;
-        --greige-accent: #7A6E62;
-        --greige-accent-strong: #564E47;
-        --greige-highlight: #9A8B7C;
-        --greige-shadow: 0 10px 28px rgba(42, 38, 34, 0.07);
+        --gemini-bg: #0B0F19;
+        --gemini-surface: #131722;
+        --gemini-surface-2: #1E2430;
+        --gemini-text: #E8EAED;
+        --gemini-text-secondary: #DADCE0;
+        --gemini-muted: #BDC1C6;
+        --gemini-border: #2D3544;
+        --gemini-shadow: 0 16px 36px rgba(0, 0, 0, 0.32);
     }
 
-    .stApp {
-        background:
-            radial-gradient(circle at 12% 0%, rgba(154, 139, 124, 0.07), transparent 28rem),
-            radial-gradient(circle at 88% 4%, rgba(122, 110, 98, 0.05), transparent 30rem),
-            linear-gradient(180deg, var(--greige-bg-soft) 0%, var(--greige-bg) 100%);
+    h1, h2, h3, h4, .stMarkdown, p, span, label, li {
+        color: var(--gemini-text) !important;
+    }
+
+    .stButton > button,
+    .stDownloadButton > button,
+    .stFormSubmitButton > button,
+    .stLinkButton > a {
+        border-color: color-mix(in srgb, var(--gemini-border) 80%, #FFFFFF 20%) !important;
+        background: linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--gemini-surface) 82%, rgba(26, 115, 232, 0.28)),
+            color-mix(in srgb, var(--gemini-surface) 72%, rgba(161, 66, 244, 0.24))
+        ) !important;
     }
 }
 
