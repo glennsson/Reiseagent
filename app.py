@@ -1097,28 +1097,78 @@ def _perle_nokkel(navn, by, land):
     return f"{(navn or '').strip().lower()}|{(by or '').strip().lower()}|{(land or '').strip().lower()}"
 
 
-def _finn_synlig_sted(navn, by, land):
+def _effektiv_kilde_type(kandidat):
+    """type-felt fra KI (f.eks. overnatting) veier tyngre enn feil source_type i JSON."""
+    if not kandidat:
+        return "hidden_gem"
+    type_hint = (kandidat.get("type") or "").strip().lower()
+    if type_hint in ("hotell", "hotel", "overnatting", "lodging"):
+        return "hotel"
+    if type_hint in ("gastronomi", "restaurant", "mat"):
+        return "restaurant"
+    return (kandidat.get("source_type") or "hidden_gem").strip().lower()
+
+
+def _kilde_type_visning(kandidat):
+    kilde = _effektiv_kilde_type(kandidat)
+    if kilde == "hotel":
+        return tr("type_hotell")
+    if kilde == "restaurant":
+        return tr("type_mat", "Spisested")
+    return tr("type_perle", "Perle")
+
+
+def _synk_kandidat_kilde_type(kandidat):
+    """Sikrer at source_type og type stemmer før lagring/duplikatsjekk."""
+    if not kandidat:
+        return kandidat
+    kilde = _effektiv_kilde_type(kandidat)
+    kandidat["source_type"] = kilde
+    if kilde == "hotel":
+        kandidat["type"] = "overnatting"
+    elif kilde == "restaurant":
+        kandidat["type"] = "gastronomi"
+    return kandidat
+
+
+def _finn_synlig_sted(navn, by, land, onsket_kilde=None):
     """Finner sted som faktisk telles i appen (Utforsk-tallene)."""
     key = _perle_nokkel(navn, by, land)
-    for sted in _alle_steder_i_databasen():
-        if _perle_nokkel(sted.get("navn"), sted.get("by"), sted.get("land")) == key:
-            return sted
-    return None
+    treff = [
+        sted
+        for sted in _alle_steder_i_databasen()
+        if _perle_nokkel(sted.get("navn"), sted.get("by"), sted.get("land")) == key
+    ]
+    if not treff:
+        return None
+    if onsket_kilde:
+        for sted in treff:
+            if _effektiv_kilde_type(sted) == onsket_kilde:
+                return sted
+    return treff[0]
 
 
 def _kandidat_lagringsstatus(kandidat):
     """Om KI-forslag kan lagres, allerede finnes synlig, eller bør oppgraderes."""
-    synlig = _finn_synlig_sted(kandidat.get("navn"), kandidat.get("by"), kandidat.get("land"))
-    ktype = (kandidat.get("source_type") or "hidden_gem").strip().lower()
+    kandidat = _synk_kandidat_kilde_type(dict(kandidat))
+    ktype = _effektiv_kilde_type(kandidat)
+    synlig = _finn_synlig_sted(
+        kandidat.get("navn"), kandidat.get("by"), kandidat.get("land"), onsket_kilde=ktype
+    ) or _finn_synlig_sted(kandidat.get("navn"), kandidat.get("by"), kandidat.get("land"))
     if not synlig:
         return {"kan_lagre": True, "allerede_synlig": False, "erstatter": False}
-    eks_type = (synlig.get("source_type") or "hidden_gem").strip().lower()
+    eks_type = _effektiv_kilde_type(synlig)
     if eks_type == ktype:
         melding = {
             "hotel": "sank_allerede_i_db_hotell",
             "restaurant": "sank_allerede_i_db_mat",
         }.get(eks_type, "sank_allerede_i_db_perle")
-        return {"kan_lagre": False, "allerede_synlig": True, "melding_nokkel": melding}
+        return {
+            "kan_lagre": False,
+            "allerede_synlig": True,
+            "melding_nokkel": melding,
+            "synlig_kategori": _kilde_type_visning(synlig),
+        }
     erstatter_nokkel = {
         ("hidden_gem", "hotel"): "sank_oppgrader_til_hotell",
         ("hotel", "hidden_gem"): "sank_oppgrader_til_perle",
@@ -1326,6 +1376,10 @@ def sanke_perler_for_omrade(omrade, antall=8, strict_mode=False):
         if not kandidat:
             forkastet_normalisering += 1
             continue
+        kandidat = _juster_agent_perle_fra_chat_tekst(
+            kandidat, json.dumps(rå, ensure_ascii=False)
+        )
+        kandidat = _synk_kandidat_kilde_type(kandidat)
 
         ai_score = rå.get("saerhetsscore", rå.get("uniqueness_score"))
         if ai_score is not None:
@@ -3368,6 +3422,8 @@ with fane3:
             if not omrade:
                 st.error(tr("sank_feil_omrade"))
             else:
+                st.session_state.pop("sank_kandidater", None)
+                st.session_state.pop("sank_rapport", None)
                 try:
                     with st.spinner(tr("sank_spinner").format(omrade)):
                         kandidater, rapport = sanke_perler_for_omrade(
@@ -3447,7 +3503,7 @@ with fane3:
                     st.markdown(
                         f"**{kandidat['navn']}**  \n"
                         + tr("sank_kandidat_meta").format(
-                            kandidat.get("type", "kultur").capitalize(),
+                            _kilde_type_visning(kandidat),
                             kandidat.get("saerhetsscore", 0),
                             kandidat["by"],
                             kandidat["land"],
