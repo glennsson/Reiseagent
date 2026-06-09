@@ -385,16 +385,29 @@ small,
     ) !important;
 }
 
+[data-testid="stTabs"],
+[data-testid="stTabs"] > div,
+.stTabs {
+    overflow: visible !important;
+    max-width: 100%;
+}
+
 .stTabs [data-baseweb="tab-list"] {
     position: sticky;
     top: 0.25rem;
     z-index: 40;
-    display: flex;
-    gap: 0.45rem;
-    overflow-x: auto;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 0.35rem;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
-    padding: 0.45rem;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    padding: 0.4rem 0.45rem 0.5rem;
     border-radius: 16px;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -403,12 +416,23 @@ small,
     box-shadow: 0 10px 26px rgba(15, 23, 42, 0.10);
 }
 
+.stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {
+    height: 5px;
+}
+
+.stTabs [data-baseweb="tab-list"]::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--gemini-muted) 50%, transparent);
+    border-radius: 999px;
+}
+
 .stTabs [data-baseweb="tab"] {
     border-radius: 12px;
-    padding: 0.5rem 0.95rem;
+    padding: 0.4rem 0.68rem;
     scroll-snap-align: start;
+    flex: 0 0 auto;
     flex-shrink: 0;
-    font-size: 0.82rem !important;
+    white-space: nowrap;
+    font-size: 0.76rem !important;
     background: color-mix(in srgb, var(--gemini-surface-2) 75%, transparent);
     border: 1px solid color-mix(in srgb, var(--gemini-border) 75%, transparent);
     color: var(--gemini-text-secondary) !important;
@@ -606,9 +630,13 @@ div[class*="st-key-plan_"] button:active {
     }
 
     .stTabs [data-baseweb="tab"] {
-        min-width: max-content;
-        padding: 0.55rem 1rem;
-        font-size: 0.8rem !important;
+        padding: 0.36rem 0.58rem;
+        font-size: 0.72rem !important;
+    }
+
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.28rem;
+        padding: 0.35rem 0.35rem 0.45rem;
     }
 
     .he-land-grid {
