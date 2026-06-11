@@ -170,9 +170,8 @@ def _ensure_places_seeded():
     st.session_state._places_seeded = True
 
 
-def _last_lokale_stedlister():
-    """Oppfrisker lister fra SQLite ved hver Streamlit-kjøring."""
-    _ensure_places_seeded()
+def _last_lokale_stedlister_impl():
+    """Leser og filtrerer stedlister fra SQLite."""
     kuratert_overnatting = _hent_kuratert_overnatting_for_visning()
     alle_db = get_places(seed=False)
     return (
@@ -188,6 +187,25 @@ def _last_lokale_stedlister():
                 [s for s in alle_db if _effektiv_kilde_type(s) == "hotel"]
             ),
         ),
+    )
+
+
+@st.cache_data(show_spinner=False)
+def _cached_lokale_stedlister(cache_token: int):
+    """Cachet stedliste — invalideres via _places_cache_token i session_state."""
+    return _last_lokale_stedlister_impl()
+
+
+def _hent_lokale_stedlister():
+    """Seeder ved behov og returnerer cachet stedliste."""
+    _ensure_places_seeded()
+    token = st.session_state.get("_places_cache_token", 0)
+    return _cached_lokale_stedlister(token)
+
+
+def _invalider_stedliste_cache():
+    st.session_state["_places_cache_token"] = (
+        st.session_state.get("_places_cache_token", 0) + 1
     )
 
 
@@ -288,12 +306,21 @@ if "_profil_lagret_snapshot" not in st.session_state:
 st.set_page_config(page_title="Hemmelige Europa", layout="wide", initial_sidebar_state="expanded")
 
 
+@st.cache_data(show_spinner=False)
+def _les_style_css(css_mtime_ns: int):
+    """Leser style.css — cachet til filen endres."""
+    css_path = Path(__file__).with_name("style.css")
+    if not css_path.exists():
+        return ""
+    return css_path.read_text(encoding="utf-8")
+
+
 def _inject_styles():
-    """Leser style.css og injiserer CSS i appen."""
+    """Injiserer cachet CSS i appen."""
     css_path = Path(__file__).with_name("style.css")
     if not css_path.exists():
         return
-    css = css_path.read_text(encoding="utf-8")
+    css = _les_style_css(int(css_path.stat().st_mtime_ns))
     if css.strip():
         st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
@@ -377,14 +404,15 @@ for _lang, _keys in _HOTELL_TEKST_FALLBACK.items():
 
 T: dict[str, str] = {**TEKSTER["NO"], **TEKSTER[_spraak]}
 
-# Oppfrisk stedlister etter språk/tekster er satt (hver script rerun)
-SKJULTE_PERLER_DB, LOKALE_SPISESTEDER_DB, LOKALE_HOTELLER_DB = _last_lokale_stedlister()
+# Stedlister (cachet — invalideres ved DB-lagring)
+SKJULTE_PERLER_DB, LOKALE_SPISESTEDER_DB, LOKALE_HOTELLER_DB = _hent_lokale_stedlister()
 
 
 def _oppfrisk_lokale_stedlister():
     """Leser stedlister på nytt fra SQLite (etter lagring i DB)."""
     global SKJULTE_PERLER_DB, LOKALE_SPISESTEDER_DB, LOKALE_HOTELLER_DB
-    SKJULTE_PERLER_DB, LOKALE_SPISESTEDER_DB, LOKALE_HOTELLER_DB = _last_lokale_stedlister()
+    _invalider_stedliste_cache()
+    SKJULTE_PERLER_DB, LOKALE_SPISESTEDER_DB, LOKALE_HOTELLER_DB = _hent_lokale_stedlister()
 
 
 def tr(key: str, default: str | None = None) -> str:
@@ -2493,6 +2521,82 @@ def _bygg_rag_kontekst(sporsmal):
     )
 
 
+_FRAGMENT = getattr(st, "fragment", lambda f: f)
+
+
+def _lazy_folium_i_expander(
+    session_key: str,
+    expander_tittel: str,
+    kart_factory,
+    *,
+    folium_key: str,
+    caption_tekst: str = "",
+    width="stretch",
+    height=420,
+    returned_objects=None,
+):
+    """Bygger Folium-kart først når brukeren ber om det."""
+    if returned_objects is None:
+        returned_objects = []
+    with st.expander(expander_tittel, expanded=False):
+        if not st.session_state.get(session_key):
+            st.caption(tr("kart_lazy_hint"))
+            if st.button(
+                tr("kart_last_inn"),
+                key=f"{session_key}_btn",
+                use_container_width=True,
+            ):
+                st.session_state[session_key] = True
+                st.rerun()
+            return None
+        kart = kart_factory()
+        resultat = st_folium(
+            kart,
+            width=width,
+            height=height,
+            returned_objects=returned_objects,
+            key=folium_key,
+        )
+        if caption_tekst:
+            st.caption(caption_tekst)
+        return resultat
+
+
+def _paginert_liste_visning(
+    filtrert: list,
+    filter_key: str,
+    session_antall_key: str,
+    session_filter_key: str,
+    vis_flere_tekst_fn,
+    vis_kort_fn,
+    *,
+    vis_flere_btn_key: str,
+    batch: int = 12,
+):
+    """Viser liste i batch med «vis flere» (samme mønster som oppdagelser)."""
+    if st.session_state.get(session_filter_key) != filter_key:
+        st.session_state[session_filter_key] = filter_key
+        st.session_state[session_antall_key] = batch
+    vis_antall = st.session_state.get(session_antall_key, batch)
+    side = filtrert[:vis_antall]
+    if not side:
+        return False
+    for i in range(0, len(side), 3):
+        cols = st.columns(3)
+        for j in range(3):
+            if i + j < len(side):
+                with cols[j]:
+                    vis_kort_fn(side[i + j], i + j)
+    if len(filtrert) > vis_antall:
+        if st.button(
+            vis_flere_tekst_fn(len(filtrert) - vis_antall),
+            key=vis_flere_btn_key,
+        ):
+            st.session_state[session_antall_key] = vis_antall + batch
+            st.rerun()
+    return True
+
+
 # ========================================
 # APPLIKASJONSSTRUKTUR (UI) — faner nederst i skriptet
 # ========================================
@@ -2517,7 +2621,8 @@ fane0, fane_ki, fane1, fane2, fane3, fane4, fane5 = st.tabs(
 
 
 # --- FANE 0: HJEM & RADAR (felles startside) ---
-with fane0:
+@_FRAGMENT
+def _render_fane_utforsk():
     st.header(T["hjem_header"])
     alle_oppdagelser = _alle_steder_i_databasen()
     antall_land = len(set(s["country_code"] or s["land"] for s in alle_oppdagelser))
@@ -2772,22 +2877,19 @@ with fane0:
         st.write("---")
         st.subheader(T["perler_header"])
         perler_med_koords = filtrer_data(SKJULTE_PERLER_DB)
-        with st.expander(tr("perler_kart_expander"), expanded=False):
-            if perler_med_koords:
-                perler_alle_kart = lag_stedskart(perler_med_koords)
-                st_folium(
-                    perler_alle_kart,
-                    width="stretch",
-                    height=420,
-                    returned_objects=[],
-                    key="perler_alle_folium_kart",
-                )
-                st.caption(
-                    tr("perler_kart_caption").format(
-                        len(perler_med_koords), len(SKJULTE_PERLER_DB)
-                    )
-                )
-            else:
+        if perler_med_koords:
+            _lazy_folium_i_expander(
+                "_perler_alle_kart_aktiv",
+                tr("perler_kart_expander"),
+                lambda: lag_stedskart(perler_med_koords),
+                folium_key="perler_alle_folium_kart",
+                caption_tekst=tr("perler_kart_caption").format(
+                    len(perler_med_koords), len(SKJULTE_PERLER_DB)
+                ),
+                height=420,
+            )
+        else:
+            with st.expander(tr("perler_kart_expander"), expanded=False):
                 st.info(T["perler_ingen_koordinater"])
 
         col_s1, col_s2 = st.columns(2)
@@ -2881,8 +2983,12 @@ with fane0:
                 st.caption(tr("perler_sok_mat_hint").format(sok_perle))
 
 
+with fane0:
+    _render_fane_utforsk()
+
 # --- FANE: KI (OPPDAGELSER + HELGEBY) ---
-with fane_ki:
+@_FRAGMENT
+def _render_fane_ki():
     ki_modus = st.segmented_control(
         tr("ki_modus_label"),
         options=[tr("ki_modus_oppdagelser"), tr("ki_modus_helgeby")],
@@ -3045,26 +3151,32 @@ with fane_ki:
             vis_tom_tilstand("🌆", tr("sank_ingen_tittel"), tr("helgeby_ingen"))
 
 
+    # --- FANE 1: MAT ---
+
+with fane_ki:
+    _render_fane_ki()
+
 # --- FANE 1: MAT ---
-with fane1:
+@_FRAGMENT
+def _render_fane_mat():
     st.header(T["mat_header"])
     st.caption(tr("mat_i_db").format(len(LOKALE_SPISESTEDER_DB)))
 
     mat_med_koordinater = [
         s for s in LOKALE_SPISESTEDER_DB if "latitude" in s and "longitude" in s
     ]
-    with st.expander(tr("mat_kart_expander"), expanded=False):
-        if mat_med_koordinater:
-            mat_kart = lag_stedskart(mat_med_koordinater)
-            st_folium(
-                mat_kart,
-                width=700,
-                height=500,
-                returned_objects=[],
-                key="mat_folium_kart",
-            )
-            st.caption(tr("mat_pa_kart").format(len(mat_med_koordinater)))
-        else:
+    if mat_med_koordinater:
+        _lazy_folium_i_expander(
+            "_mat_kart_aktiv",
+            tr("mat_kart_expander"),
+            lambda: lag_stedskart(mat_med_koordinater),
+            folium_key="mat_folium_kart",
+            caption_tekst=tr("mat_pa_kart").format(len(mat_med_koordinater)),
+            width=700,
+            height=500,
+        )
+    else:
+        with st.expander(tr("mat_kart_expander"), expanded=False):
             st.info(T["perler_ingen_koordinater"])
 
     col_m1, col_m2 = st.columns(2)
@@ -3089,28 +3201,38 @@ with fane1:
         filtrert_mat.append(sted)
 
 
-    if filtrert_mat:
-        for i in range(0, len(filtrert_mat), 3):
-            cols = st.columns(3)
-            for j in range(3):
-                if i + j < len(filtrert_mat):
-                    s = filtrert_mat[i + j]
-                    mat_tittel = sted_tittel_med_profil(s, "🍽️")
-                    with cols[j]:
-                        vis_sted_foto(s, key_suffix=f"mat_{s['id']}")
-                        _vis_travel_card(
-                            s,
-                            mat_tittel,
-                            pris_tekst=f"{T['mat_pris']} {s['pris']}",
-                        )
-                        render_reiseplan_knapp(s, "mat", index=i + j)
-                        render_affiliate_lenker(s, "mat", index=i + j)
-    else:
+    def _vis_mat_kort(s, index):
+        mat_tittel = sted_tittel_med_profil(s, "🍽️")
+        vis_sted_foto(s, key_suffix=f"mat_{s['id']}")
+        _vis_travel_card(
+            s,
+            mat_tittel,
+            pris_tekst=f"{T['mat_pris']} {s['pris']}",
+        )
+        render_reiseplan_knapp(s, "mat", index=index)
+        render_affiliate_lenker(s, "mat", index=index)
+
+    mat_filter_key = f"{sok_mat}|{type_mat}"
+    if not _paginert_liste_visning(
+        filtrert_mat,
+        mat_filter_key,
+        "mat_vis_antall",
+        "_mat_filter_key",
+        lambda n: tr("mat_vis_flere").format(n),
+        _vis_mat_kort,
+        vis_flere_btn_key="mat_vis_flere_btn",
+    ):
         vis_tom_tilstand("🍽️", tr("tom_perler_tittel"), T["mat_ingen_treff"])
 
 
+    # --- FANE 2: OVERNATTING ---
+
+with fane1:
+    _render_fane_mat()
+
 # --- FANE 2: OVERNATTING ---
-with fane2:
+@_FRAGMENT
+def _render_fane_hotell():
     st.header(tr("hotell_header"))
     st.caption(tr("hotell_i_db").format(len(LOKALE_HOTELLER_DB)))
 
@@ -3123,18 +3245,18 @@ with fane2:
     hotell_med_koordinater = [
         s for s in LOKALE_HOTELLER_DB if "latitude" in s and "longitude" in s
     ]
-    with st.expander(tr("hotell_kart_expander"), expanded=False):
-        if hotell_med_koordinater:
-            hotell_kart = lag_stedskart(hotell_med_koordinater)
-            st_folium(
-                hotell_kart,
-                width=700,
-                height=500,
-                returned_objects=[],
-                key="hotell_folium_kart",
-            )
-            st.caption(tr("hotell_pa_kart").format(len(hotell_med_koordinater)))
-        else:
+    if hotell_med_koordinater:
+        _lazy_folium_i_expander(
+            "_hotell_kart_aktiv",
+            tr("hotell_kart_expander"),
+            lambda: lag_stedskart(hotell_med_koordinater),
+            folium_key="hotell_folium_kart",
+            caption_tekst=tr("hotell_pa_kart").format(len(hotell_med_koordinater)),
+            width=700,
+            height=500,
+        )
+    else:
+        with st.expander(tr("hotell_kart_expander"), expanded=False):
             st.info(T["perler_ingen_koordinater"])
 
     col_h1, col_h2 = st.columns(2)
@@ -3161,28 +3283,38 @@ with fane2:
         filtrert_hotell.append(sted)
 
 
-    if filtrert_hotell:
-        for i in range(0, len(filtrert_hotell), 3):
-            cols = st.columns(3)
-            for j in range(3):
-                if i + j < len(filtrert_hotell):
-                    s = filtrert_hotell[i + j]
-                    hotell_tittel = sted_tittel_med_profil(s, "🛏️")
-                    with cols[j]:
-                        vis_sted_foto(s, key_suffix=f"hotell_{s['id']}")
-                        _vis_travel_card(
-                            s,
-                            hotell_tittel,
-                            pris_tekst=f"{tr('hotell_pris')} {s.get('pris', '€€')}",
-                        )
-                        render_reiseplan_knapp(s, "hotell", index=i + j)
-                        render_affiliate_lenker(s, "hotell", index=i + j)
-    else:
+    def _vis_hotell_kort(s, index):
+        hotell_tittel = sted_tittel_med_profil(s, "🛏️")
+        vis_sted_foto(s, key_suffix=f"hotell_{s['id']}")
+        _vis_travel_card(
+            s,
+            hotell_tittel,
+            pris_tekst=f"{tr('hotell_pris')} {s.get('pris', '€€')}",
+        )
+        render_reiseplan_knapp(s, "hotell", index=index)
+        render_affiliate_lenker(s, "hotell", index=index)
+
+    hotell_filter_key = f"{sok_hotell}|{type_hotell}"
+    if not _paginert_liste_visning(
+        filtrert_hotell,
+        hotell_filter_key,
+        "hotell_vis_antall",
+        "_hotell_filter_key",
+        lambda n: tr("hotell_vis_flere").format(n),
+        _vis_hotell_kort,
+        vis_flere_btn_key="hotell_vis_flere_btn",
+    ):
         vis_tom_tilstand("🛏️", tr("tom_perler_tittel"), tr("hotell_ingen_treff"))
 
 
+    # --- FANE 3: REISE-CHAT ---
+
+with fane2:
+    _render_fane_hotell()
+
 # --- FANE 3: REISE-CHAT ---
-with fane3:
+@_FRAGMENT
+def _render_fane_chat():
     st.header(T["chat_header"])
     st.caption(T["chat_caption"])
 
@@ -3383,7 +3515,12 @@ with fane3:
         st.rerun()
 
 
-with fane4:
+
+with fane3:
+    _render_fane_chat()
+
+@_FRAGMENT
+def _render_fane_reiseplan():
     st.header(T["reiseplan_header"])
     itinerary_items = get_itinerary_items()
     st.caption(tr("reiseplan_antall").format(len(itinerary_items)))
@@ -3446,13 +3583,13 @@ with fane4:
         )
 
         if any(item.get("latitude") and item.get("longitude") for item in itinerary_items):
-            reiseplan_kart = lag_reiseplan_rute_kart(itinerary_items)
-            st_folium(
-                reiseplan_kart,
+            _lazy_folium_i_expander(
+                "_reiseplan_kart_aktiv",
+                tr("reiseplan_kart_expander"),
+                lambda: lag_reiseplan_rute_kart(itinerary_items),
+                folium_key="reiseplan_kart",
                 width=900,
                 height=420,
-                returned_objects=[],
-                key="reiseplan_kart",
             )
 
         for item in itinerary_items:
@@ -3485,8 +3622,14 @@ with fane4:
             st.caption(tr("reiseplan_optimalisert"))
             st.write_stream(generer_ai_reiserute(optimalisert_reiseplan, dager))
 
+    # --- FANE 5: TRANSPORT ---
+
+with fane4:
+    _render_fane_reiseplan()
+
 # --- FANE 5: TRANSPORT ---
-with fane5:
+@_FRAGMENT
+def _render_fane_transport():
     stedvalg = bygg_stedvalg_fra_database(_alle_steder_i_databasen())
     alle_labels = sorted(stedvalg.keys())
     plan_items = get_itinerary_items()
@@ -3559,6 +3702,10 @@ with fane5:
                     )
 
 
+
+
+with fane5:
+    _render_fane_transport()
 
 # ========================================
 # FOOTER
